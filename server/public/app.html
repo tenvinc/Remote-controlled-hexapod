@@ -1,31 +1,112 @@
-<!doctype html>
-<html class ="no-js" lang="">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title>Main page</title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-    </head>
-    <body>
-        <p>Welcome to the main page.</p>
-        <h2>Console output from arduino</h2>
-        <script type="text/javascript">
-            var websocket =  new WebSocket('ws://localhost:8080');
-            websocket.onopen = function(event) {
-                console.log("Websocket connection established.");
-                websocket.send('Hello, I am connecting.');
-            };
-            websocket.onmessage = function(event) {
-                let message = event.data;
-                console.log(message);
-            };
-            websocket.onerror = function(error) {
-                console.log('WebSocket Error: ' + error);
-            };
-            websocket.onclose = function(event) {
-                console.log('Disconnected from WebSocket.');
-            };
-        </script>
-    </body>
-</html>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>
+    Main Dashboard
+  </title>
+  <link href="dashboard.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="main-panel" data="primary">
+      <!-- Navbar -->
+      <nav class="navbar navbar-expand-lg navbar-absolute navbar-transparent" style="min-height: 50px;">
+        <div class="container-fluid">
+          <div class="navbar-wrapper">
+            <div class="navbar-toggle d-inline">
+              <button type="button" class="navbar-toggler">
+                <span class="navbar-toggler-bar bar1"></span>
+                <span class="navbar-toggler-bar bar2"></span>
+                <span class="navbar-toggler-bar bar3"></span>
+              </button>
+            </div>
+            <a class="navbar-brand" href="javascript:void(0)">Dashboard</a>
+          </div>
+          <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navigation"
+            aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+          </button>
+          <div class="navbar-collapse collapse" id="navigation" style="">
+          </div>
+        </div>
+      </nav>
+      <!-- End Navbar -->
+      <div class="content d-flex flex-row">
+        <div class="col-8 col-lg-7 p-0 pr-2">
+          <div class="col-12 p-0 m-0 h-75">
+            <div class="card card-chart h-100">
+              <div class="card-header ">
+                <div class="row">
+                  <div class="col-12 text-left">
+                    <h5 class="card-category">Visualization</h5>
+                    <h2 class="card-title">3D Visualization</h2>
+                  </div>
+                </div>
+              </div>
+              <div id="viz-body" class="card-body p-0">
+              </div>
+            </div>
+          </div>
+          <div class="col-12 p-0 pt-2 m-0 h-25">
+            <div class="card card-chart h-100">
+              <div class="card-header">
+                <div class="row">
+                  <div class="col-12 text-left">
+                    <h4 class="card-title">Debug console</h4>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-4 col-lg-5 p-0 d-flex flex-column">
+          <div class="card card-chart mb-2 flex-grow-1">
+            <div class="card-header ">
+              <div class="row">
+                <div class="col-12 text-left">
+                  <h5 class="card-category">Graphs</h5>
+                  <h2 class="card-title">Roll</h2>
+                </div>
+              </div>
+            </div>
+            <div class="card-body" style="min-height: 70px;">
+            </div>
+          </div>
+          <div class="card card-chart mb-2 flex-grow-1">
+            <div class="card-header ">
+              <div class="row">
+                <div class="col-12 text-left">
+                  <h5 class="card-category">Graphs</h5>
+                  <h2 class="card-title">Pitch</h2>
+                </div>
+              </div>
+            </div>
+            <div class="card-body" style="min-height: 70px;">
+            </div>
+          </div>
+          <div class="card card-chart m-0 flex-grow-1">
+            <div class="card-header ">
+              <div class="row">
+                <div class="col-12 text-left">
+                  <h5 class="card-category">Graphs</h5>
+                  <h2 class="card-title">Yaw</h2>
+                </div>
+              </div>
+            </div>
+            <div class="card-body" style="min-height: 70px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script>
+  <script src="./main.js"></script>
+</body>
