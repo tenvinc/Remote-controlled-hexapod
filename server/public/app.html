@@ -1,0 +1,31 @@
+<!doctype html>
+<html class ="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>Main page</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <p>Welcome to the main page.</p>
+        <h2>Console output from arduino</h2>
+        <script type="text/javascript">
+            var websocket =  new WebSocket('ws://localhost:8080');
+            websocket.onopen = function(event) {
+                console.log("Websocket connection established.");
+                websocket.send('Hello, I am connecting.');
+            };
+            websocket.onmessage = function(event) {
+                let message = event.data;
+                console.log(message);
+            };
+            websocket.onerror = function(error) {
+                console.log('WebSocket Error: ' + error);
+            };
+            websocket.onclose = function(event) {
+                console.log('Disconnected from WebSocket.');
+            };
+        </script>
+    </body>
+</html>
