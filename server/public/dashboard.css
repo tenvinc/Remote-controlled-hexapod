@@ -20491,4 +20491,19 @@ Copyright (c) 2015 Daniel Eden
   font-size: 1rem;
   font-weight: bold;
 }
+
+.debug-terminal {
+  background: #262626;
+  overflow-y: scroll;
+  margin-bottom: 0.5rem;
+  margin-left: 0.5rem;
+  margin-right:0.5rem;
+}
+
+.debug-terminal .message {
+  flex: 0 0 100%;
+  max-width: 100%;
+  color: #ffffff;
+  font-family: "Poppins", sans-serif;
+}
 /*# sourceMappingURL=dashboard-free.css.map */

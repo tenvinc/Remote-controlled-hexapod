@@ -1,3 +1,4 @@
+const MAX_MESSAGES_CNT = 50;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,
     0.1, 1000);
@@ -40,6 +41,7 @@ vizBody.appendChild(hud);
 var hudRoll = vizBody.querySelector("#hud-roll");
 var hudPitch = vizBody.querySelector("#hud-pitch");
 var hudYaw = vizBody.querySelector("#hud-yaw");
+var terminal = document.querySelector("#debug-terminal");
 
 var nextRoll = 0;
 var nextPitch = 0;
@@ -97,11 +99,26 @@ socket.onopen = function(e) {
   };
   
 socket.onmessage = function(event) {
-    let json = JSON.parse(event.data);
-    if (json.containReading) {
-        nextRoll = json.roll;
-        nextPitch = json.pitch;
-        nextYaw = json.yaw;
+    try {
+        let json = JSON.parse(event.data);
+        if (json.containReading) {
+            nextRoll = json.roll;
+            nextPitch = json.pitch;
+            nextYaw = json.yaw;
+        } else if ("message" in json) {
+            while (terminal.children.length > MAX_MESSAGES_CNT) {
+                console.log("Deleting previous debug messages starting from oldest...");
+                terminal.removeChild(terminal.firstElementChild);
+            }
+            let message = createElementFromHtml(`<div class="message">${json.message}</div>`);
+            terminal.appendChild(message);
+        } 
+    } catch(err) {
+        if (err instanceof SyntaxError) {
+            console.log("Error in json string. Message will be ignored.")
+        } else {
+            throw err;
+        }
     }
 };
 

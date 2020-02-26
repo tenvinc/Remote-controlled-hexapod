@@ -32,7 +32,7 @@ var json = {
     'containReading': true,
     'roll': 40.0,
     'pitch': 50.0,
-    'yaw': 60.0
+    'yaw': 60.0 
 }
 setInterval(() => {
     clients.forEach(client => {
@@ -42,6 +42,17 @@ setInterval(() => {
     json.pitch += 0.1;
     json.yaw += 0.1;
 }, 100);
+
+var json2 = {
+    'containReading': false,
+    'message': "This represents a debug message."
+}
+
+var periodicMessage = setInterval(() => {
+    clients.forEach(client => {
+        client.send(JSON.stringify(json2));
+    });
+}, 20);
 
 // port.open((err) => {
 //     if (err) console.log("Error has occured. " + err.message);
