@@ -13,17 +13,31 @@ public:
   mutable MatrixT<xDim> xKMinus;       // Store running value of state vector
 
   KalmanFilter<xDim, uDim, zDim, ElemT> (): xKMinus() {
-    pKMinus = {10, 10, 10, 10};
-    A = {0.1 , 0.2, 0.3, 0.4};
-    B = {0.5, 0.6, 0.8, 0.9};
-    R = {1.0, 1.1, 1.2, 1.3};
-    Q = {0.1, 0.2, 0.3, 0.4};
-    H = {2.0, 2.1, 2.2, 2.3};
+    pKMinus = {0, 0, 0, 0,
+              0, 0, 0, 0,
+              0, 0, 0, 0,
+              0, 0, 0, 0};
+    R = {30, 0,
+        0, 30};
+    Q = {5, 0, 0, 0,
+         0, 5, 0, 0,
+         0, 0, 5, 0,
+         0, 0, 0, 5};
+    H = {1, 0, 0, 0,
+        0, 0, 1, 0};
   }
 
-  MatrixT<xDim, 1, ElemT> filter(const MatrixT<xDim, 1, ElemT> uK, const MatrixT<zDim, 1, ElemT> zK)
+  MatrixT<xDim, 1, ElemT> filter(const MatrixT<uDim, 1, ElemT> uK, const MatrixT<zDim, 1, ElemT> zK, const float deltaTime)
   {
     int res = 0;
+    A = {1, -deltaTime, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, -deltaTime,
+        0, 0, 0, 1};
+    B = {deltaTime, 0,
+        0, 0,
+        0, deltaTime,
+        0, 0};
     MatrixT<xDim, 1, ElemT> xKp = A * xKMinus + B * uK;   // predict next State
     MatrixT<xDim, xDim, ElemT> pKp = A * pKMinus * A.transpose() + Q;  // calculate intermediate covariance matrix
     MatrixT<zDim, zDim, ElemT> S = H * pKp * H.transpose() + R;  // Step 1 of calculating Kalman Gain, K
@@ -37,6 +51,10 @@ public:
     xKMinus = xKp + K * (zK - H * xKp);  // Combine measurement and prediction to estimate current state
     pKMinus = (eye<xDim, ElemT>() - K * H) * pKp;  // update covariance matrix
     return xKMinus;
+  }
+
+  void setInitial(ElemT roll, ElemT pitch) {
+    pKMinus = {roll, pitch};
   }
 
 private:
