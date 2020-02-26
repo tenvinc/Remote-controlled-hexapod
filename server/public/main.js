@@ -21,7 +21,6 @@ function createElementFromHtml(html) {
     return template.content.cloneNode(true);
 }
 
-
 const hudHtml = `<div class="viz-hud">
                     <div class="label">Roll (deg): </div>
                     <div id="hud-roll" class="element">30.0</div>
@@ -42,6 +41,10 @@ var hudRoll = vizBody.querySelector("#hud-roll");
 var hudPitch = vizBody.querySelector("#hud-pitch");
 var hudYaw = vizBody.querySelector("#hud-yaw");
 
+var nextRoll = 0;
+var nextPitch = 0;
+var nextYaw = 0;
+
 function updateHud(rotation) {
     let rollDegrees = (rotation.x / Math.PI) * 360;
     let pitchDegrees = (rotation.y / Math.PI) * 360;
@@ -59,9 +62,10 @@ function updateHud(rotation) {
 
 function animate() {
     requestAnimationFrame(animate);
-
-    cube.rotation.z += 0.01;
-    cube.rotation.y += 0.01;
+    
+    cube.rotation.x = nextPitch;
+    cube.rotation.y = nextYaw;
+    cube.rotation.z = nextRoll;
     updateHud(cube.rotation);
     renderer.render(scene, camera);
 }
@@ -84,3 +88,34 @@ window.addEventListener('resize', resizeViz, false)
 
 animate();
 resizeViz();
+
+const socket = new WebSocket("ws://localhost:8080");
+
+socket.onopen = function(e) {
+    alert("[open] Connection established");
+    alert("Sending to server");
+  };
+  
+socket.onmessage = function(event) {
+    let json = JSON.parse(event.data);
+    if (json.containReading) {
+        nextRoll = json.roll;
+        nextPitch = json.pitch;
+        nextYaw = json.yaw;
+    }
+};
+
+socket.onclose = function(event) {
+if (event.wasClean) {
+    alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+} else {
+    // e.g. server process killed or network down
+    // event.code is usually 1006 in this case
+    alert('[close] Connection died');
+}
+};
+
+socket.onerror = function(error) {
+alert(`[error] ${error.message}`);
+};
+
