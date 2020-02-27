@@ -116,12 +116,9 @@ void loop() {
   MatrixT<2, 1, float> update = {gyroY, gyroX};  // flipped x and y axis
   MatrixT<4, 1, float> final = kalmanFilter.filter(update, measurement, timeDelta);
 
-  // Serial.print("Final angles: ");
-  // Serial.print(roll, 5);
-  // Serial.print(" ");
-  // Serial.println(final(0, 0), 5);
-  Serial.print(pitch, 5);
-  Serial.print(", ");
+  Serial.print("Data: ");
+  Serial.print(final(0, 0), 5);
+  Serial.print(",");
   Serial.println(final(2, 0), 5);
 }
 

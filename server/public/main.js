@@ -6,7 +6,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const vizBody = document.getElementById("viz-body");
 
-const geometry = new THREE.BoxGeometry();
+const geometry = new THREE.BoxGeometry(2, 0.2, 1);
 const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 const cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
@@ -48,14 +48,24 @@ var nextPitch = 0;
 var nextYaw = 0;
 
 function updateHud(rotation) {
-    let rollDegrees = (rotation.x / Math.PI) * 360;
-    let pitchDegrees = (rotation.y / Math.PI) * 360;
-    let yawDegrees = (rotation.z / Math.PI) * 360;
+    // Javascript frame reference: Roll: z, Pitch: x, Yaw: y
+    let rollDegrees = (rotation.z / 2 * Math.PI) * 360;
+    let pitchDegrees = (rotation.x / 2 * Math.PI) * 360;
+    let yawDegrees = (rotation.y / 2 * Math.PI) * 360;
 
     // Restrict range to [0, 360]
     rollDegrees = rollDegrees - Math.floor(rollDegrees / 360) * 360;
     pitchDegrees = pitchDegrees - Math.floor(pitchDegrees / 360) * 360;
     yawDegrees = yawDegrees - Math.floor(yawDegrees / 360) * 360;
+
+    // Restrict range to [-180, 180]
+    rollDegrees = (rollDegrees <= 180) ? rollDegrees : -(360 - rollDegrees);
+    pitchDegrees = (pitchDegrees <= 180) ? pitchDegrees : -(360 - pitchDegrees);
+    yawDegrees = (yawDegrees <= 180) ? yawDegrees : -(360 - yawDegrees);
+
+    // Transform to real world representation 
+    rollDegrees = -rollDegrees;  // Roll left is -ve instead of javascript +ve
+    yawDegrees = -yawDegrees;  // Yaw left is -ve instead of javascript +ve
 
     hudRoll.textContent = rollDegrees.toFixed(2);
     hudPitch.textContent = pitchDegrees.toFixed(2);
@@ -64,10 +74,10 @@ function updateHud(rotation) {
 
 function animate() {
     requestAnimationFrame(animate);
-    
+    // Javascript frame reference: Roll: -z, Pitch: x, Yaw: -y
     cube.rotation.x = nextPitch;
-    cube.rotation.y = nextYaw;
-    cube.rotation.z = nextRoll;
+    cube.rotation.y = -nextYaw;
+    cube.rotation.z = -nextRoll;
     updateHud(cube.rotation);
     renderer.render(scene, camera);
 }
@@ -101,10 +111,12 @@ socket.onopen = function(e) {
 socket.onmessage = function(event) {
     try {
         let json = JSON.parse(event.data);
+        console.log(json);
         if (json.containReading) {
-            nextRoll = json.roll;
-            nextPitch = json.pitch;
-            nextYaw = json.yaw;
+            // reading in degrees, convert to radians
+            nextRoll = json.roll * 2 * Math.PI / 360;
+            nextPitch = json.pitch * 2* Math.PI / 360;
+            nextYaw = json.yaw * 2* Math.PI / 360;
         } else if ("message" in json) {
             while (terminal.children.length > MAX_MESSAGES_CNT) {
                 console.log("Deleting previous debug messages starting from oldest...");

@@ -1,16 +1,16 @@
 const express = require('express');
 const app = express();
 const path = require('path');
-// const Serial = require('serialport');
-// const port = new Serial('/dev/ttyACM0', {
-//     baudRate: 115200,
-//     autoOpen: false,
-//     dataBits: 8,
-//     parity: 'none',
-//     stopBits: 1
-// });
-// const Readline = require('@serialport/parser-readline');
-// const parser = port.pipe(new Readline({ delimiter: '\n' }))
+const Serial = require('serialport');
+const port = new Serial('/dev/ttyACM0', {
+    baudRate: 115200,
+    autoOpen: false,
+    dataBits: 8,
+    parity: 'none',
+    stopBits: 1
+});
+const Readline = require('@serialport/parser-readline');
+const parser = port.pipe(new Readline({ delimiter: '\n' }))
 const WebSocket = require('ws');
 
 const wsServer = new WebSocket.Server({ port: 8080 })
@@ -27,21 +27,6 @@ wsServer.on('connection', ws => {
     ws.send("thank you for the connection!");
 });
 
-var cnt = 0;
-var json = {
-    'containReading': true,
-    'roll': 40.0,
-    'pitch': 50.0,
-    'yaw': 60.0 
-}
-setInterval(() => {
-    clients.forEach(client => {
-        client.send(JSON.stringify(json));
-    });
-    json.roll += 0.1;
-    json.pitch += 0.1;
-    json.yaw += 0.1;
-}, 100);
 
 var json2 = {
     'containReading': false,
@@ -54,22 +39,38 @@ var periodicMessage = setInterval(() => {
     });
 }, 20);
 
-// port.open((err) => {
-//     if (err) console.log("Error has occured. " + err.message);
-// });
+port.open((err) => {
+    if (err) console.log("Error has occured. " + err.message);
+});
 
-// port.on('open', () => {
-//     console.log("Connection with Arduino established.")
-// });
+port.on('open', () => {
+    console.log("Connection with Arduino established.")
+});
 
-// parser.on('data', (data) => {
-//     clients.forEach(client => {
-//         if (client.readyState == WebSocket.OPEN) {
-//             console.log("Data: " + data);
-//             client.send(data);
-//         }
-//     });
-// });
+parser.on('data', (data) => {
+    const re = /Data: ([0-9., -]+)/;
+    
+    let matcher = data.match(re);
+    if (matcher === null) return;
+    
+    let filt = matcher[1];
+    var params = filt.split(",");
+    params = params.map(item => { return parseFloat(item); });
+    console.log(params);
+    
+    let json = {
+        'containReading': true,
+        'roll': params[0],
+        'pitch': params[1],
+        'yaw': 0
+    }
+
+    clients.forEach(client => {
+        if (client.readyState == WebSocket.OPEN) {
+            client.send(JSON.stringify(json));
+        }
+    });
+});
 
 app.use(express.static(__dirname + '/public'));
 
