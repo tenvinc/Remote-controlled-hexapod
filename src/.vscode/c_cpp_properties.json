@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "Linux",
             "defines": [
                 "_DEBUG",
                 "UNICODE",
@@ -12,17 +12,35 @@
                 "ARDUINO_ARCH_AVR"
             ],
             "includePath": [
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
-                "C:\\Program Files (x86)\\Arduino\\tools\\**",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\**",
-                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
-                "${workspaceFolder}/**"
+                "/home/tenvinc/Downloads/arduino-1.8.12/tools/**",
+                "/home/tenvinc/Downloads/arduino-1.8.12/hardware/arduino/avr/**",
+                "/home/tenvinc/Downloads/arduino-1.8.12/libraries/**",
+                "/home/tenvinc/Downloads/arduino-1.8.12/hardware/tools/**"
             ],
-            "windowsSdkVersion": "8.1",
+            "forcedInclude": [
+                "/home/tenvinc/Downloads/arduino-1.8.12/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ],
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:\\Program Files (x86)\\Arduino\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "/home/tenvinc/Downloads/arduino-1.8.12/hardware/arduino/avr/**",
+                "/home/tenvinc/Downloads/arduino-1.8.12/tools/**"
+            ],
+            "forcedInclude": [
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h",
+                "/home/tenvinc/Downloads/arduino-1.8.12/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ],
+            "intelliSenseMode": "msvc-x64",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.16.27023/bin/Hostx64/x64/cl.exe",
             "cStandard": "c11",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "msvc-x64"
+            "cppStandard": "c++17"
         }
     ],
     "version": 4

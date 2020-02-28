@@ -1,9 +1,0 @@
-{
-  "python.pythonPath": "C:\\Users\\Vincent\\envs\\venv\\Scripts\\python.exe",
-  "files.associations": {
-    "limits": "cpp",
-    "type_traits": "cpp",
-    "typeinfo": "cpp",
-    "initializer_list": "cpp"
-  }
-}

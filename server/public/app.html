@@ -8,6 +8,7 @@
     Main Dashboard
   </title>
   <link href="dashboard.css" rel="stylesheet" />
+  <link rel="stylesheet" href="bootstrap4-toggle.css">
 </head>
 
 <body>
@@ -26,14 +27,8 @@
             </div>
             <a class="navbar-brand" href="javascript:void(0)">Dashboard</a>
           </div>
-          <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navigation"
-            aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-bar navbar-kebab"></span>
-            <span class="navbar-toggler-bar navbar-kebab"></span>
-            <span class="navbar-toggler-bar navbar-kebab"></span>
-          </button>
-          <div class="navbar-collapse collapse" id="navigation" style="">
-          </div>
+          <input class="toggle" type="checkbox" data-toggle="toggle" data-onstyle="success"
+            data-offstyle="secondary">
         </div>
       </nav>
       <!-- End Navbar -->

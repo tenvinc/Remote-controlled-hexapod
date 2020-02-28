@@ -1,7 +1,6 @@
 {
-    "sketch": "main\\main.ino",
-    "board": "arduino:avr:uno",
-    "output": "../build",
     "programmer": "AVR ISP",
-    "port": "COM6"
+    "sketch": "main/main.ino",
+    "board": "arduino:avr:uno",
+    "port": "/dev/ttyACM0"
 }
