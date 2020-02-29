@@ -56,12 +56,13 @@ parser.on('data', (data) => {
     let filt = matcher[1];
     var params = filt.split(",");
     params = params.map(item => { return parseFloat(item); });
-    console.log(params);
+    // console.log(params);
     
     let json = {
         'containReading': true,
-        'roll': params[0],
-        'pitch': params[1],
+        'time': params[0],
+        'roll': params[1],
+        'pitch': params[2],
         'yaw': 0
     }
 

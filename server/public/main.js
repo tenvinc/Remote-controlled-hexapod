@@ -24,7 +24,6 @@ camera.position.z = DEFAULT_CAM_POS;
 
 function createElementFromHtml(html) {
     let template = document.createElement('template');
-    console.log(template);
     html = html.trim();
     template.innerHTML = html;
     return template.content.cloneNode(true);
@@ -76,16 +75,6 @@ function updateHud(rotation) {
     hudYaw.textContent = yawDegrees.toFixed(2);
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    // Javascript frame reference: Roll: -z, Pitch: x, Yaw: -y
-    cube.rotation.x = nextPitch;
-    cube.rotation.y = -nextYaw;
-    cube.rotation.z = -nextRoll;
-    updateHud(cube.rotation);
-    renderer.render(scene, camera);
-}
-
 function resizeViz() {
     const displayWidth = renderer.domElement.clientHeight;
     const displayHeight = renderer.domElement.clientWidth;
@@ -96,7 +85,7 @@ function resizeViz() {
 
     if (canvas.height !== displayHeight || canvas.width !== displayWidth) {
         renderer.setSize(displayWidth, displayHeight, false);
-        console.log("Canvas resized to " + canvas.height + ", " + canvas.width);
+        console.log("3D Canvas resized to " + canvas.height + ", " + canvas.width);
     }
 }
 
@@ -207,6 +196,12 @@ function setupConnection(context) {
                 nextRoll = json.roll * 2 * Math.PI / 360;
                 nextPitch = json.pitch * 2 * Math.PI / 360;
                 nextYaw = json.yaw * 2 * Math.PI / 360;
+
+                // convert time into seconds
+                time = json.time / 1000;
+                rollReadings.push(new Point2D(time, nextRoll));
+                pitchReadings.push(new Point2D(time, nextPitch));
+
             } else if ("message" in json) {
                 while (terminal.children.length > MAX_MESSAGES_CNT) {
                     console.log("Deleting previous debug messages starting from oldest...");
@@ -245,12 +240,258 @@ function teardownConnection() {
     socket = undefined;
 }
 
-/*********************************************************************/
+/****************************** Real time graphs **********************************/
+const Point2D = function (x, y) {
+    this.x = x;
+    this.y = y;
+}
 
+var GraphOptions = function (options) {
+    // Range of axis
+    if (options === undefined) {
+        options = {};
+    }
+    this.minX = (options.minX) ? options.minX : -10;
+    this.maxX = (options.maxX) ? options.maxX : 10;
+    this.minY = (options.minY) ? options.minY : -2;
+    this.maxY = (options.maxY) ? options.maxY : 2;
+    let originX = (options.originX) ? options.originX : 0;
+    let originY = (options.originY) ? options.originY : 0;
+    this.origin = new Point2D(originX, originY);
+
+    this.xTick = (options.xTick) ? options.xTick : (this.maxX - this.minX) / 10;
+    this.yTick = (options.yTick) ? options.yTick : (this.maxY - this.minY) / 10;
+
+    this.tickColor = (options.tickColor) ? options.tickColor : 'white';
+    this.tickSize = (options.tickSize) ? options.tickSize : 10;
+    this.tickWidth = (options.tickWidth) ? options.tickWidth : 3;
+
+    this.crossSize = (options.crossSize) ? options.crossSize : 2;
+
+    this.arrowColor = (options.arrowColor) ? options.arrowColor : 'white';
+    this.arrowLength = (options.arrowLength) ? options.arrowLength : 10;
+    this.arrowWidth = (options.arrowWidth) ? options.arrowWidth : 3;
+
+    this.axisColor = (options.axisColor) ? options.axisColor : 'white';
+    this.axisWidth = (options.axisWidth) ? options.axisWidth : 3;
+}
+
+var Plot = function (params, options, canvas) {
+    if (!(options instanceof GraphOptions)) {
+        throw "Please supply a GraphOptions object";
+    }
+    this.options = options;
+
+    // padding measured in pixels
+    this.paddingLeft = (params.paddingLeft) ? params.paddingLeft : 20;
+    this.paddingRight = (params.paddingRight) ? params.paddingRight : 20;
+    this.paddingTop = (params.paddingTop) ? params.paddingTop : 20;
+    this.paddingBtm = (params.paddingBtm) ? params.paddingBtm : 20;
+
+    this.graphWidth = canvas.width - this.paddingLeft - this.paddingRight;
+    this.graphHeight = canvas.height - this.paddingTop - this.paddingBtm;
+
+    this.topLeft = new Point2D(this.paddingLeft, this.paddingTop);
+    this.topRight = new Point2D(this.paddingLeft + this.graphWidth, this.paddingTop);
+    this.btmLeft = new Point2D(this.paddingLeft, this.paddingTop + this.graphHeight);
+    this.btmRight = new Point2D(this.paddingLeft + this.graphWidth, this.paddingTop + this.graphHeight);
+
+    this.ctx = canvas.getContext('2d');
+}
+
+Plot.prototype.transformToScreenFrame = function (point) {
+    let x = this.btmLeft.x + ((point.x - this.options.minX) / (this.options.maxX - this.options.minX)) * this.graphWidth;
+    let y = this.btmLeft.y - ((point.y - this.options.minY) / (this.options.maxY - this.options.minY)) * this.graphHeight;
+    return new Point2D(x, y);
+}
+
+Plot.prototype.drawAxis = function () {
+    var originScreen = this.transformToScreenFrame(this.options.origin);
+
+    var xAxisStart = new Point2D(this.btmLeft.x, originScreen.y);
+    var xAxisEnd = new Point2D(this.btmRight.x, originScreen.y);
+    var yAxisStart = new Point2D(originScreen.x, this.btmLeft.y);
+    var yAxisEnd = new Point2D(originScreen.x, this.topLeft.y);
+
+    // Draw the lines
+    this.ctx.lineWidth = this.options.axisWidth;
+    this.ctx.strokeStyle = this.options.axisColor;
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(xAxisStart.x, xAxisStart.y);
+    this.ctx.lineTo(xAxisEnd.x, xAxisEnd.y);
+
+    this.ctx.moveTo(yAxisStart.x, yAxisStart.y);
+    this.ctx.lineTo(yAxisEnd.x, yAxisEnd.y);
+
+    this.ctx.stroke();
+    // Draw the arrows
+    this.ctx.lineWidth = this.options.arrowWidth;
+    this.ctx.strokeStyle = this.options.arrowColor;
+
+    this.ctx.beginPath()
+    this.ctx.moveTo(xAxisEnd.x, xAxisEnd.y);
+    this.ctx.lineTo(xAxisEnd.x - this.options.arrowLength * Math.cos(Math.PI / 4),
+        xAxisEnd.y - this.options.arrowLength * Math.sin(Math.PI / 4));
+    this.ctx.moveTo(xAxisEnd.x, xAxisEnd.y);
+    this.ctx.lineTo(xAxisEnd.x - this.options.arrowLength * Math.cos(Math.PI / 4),
+        xAxisEnd.y + this.options.arrowLength * Math.sin(Math.PI / 4));
+
+    this.ctx.moveTo(yAxisEnd.x, yAxisEnd.y);
+    this.ctx.lineTo(yAxisEnd.x - this.options.arrowLength * Math.sin(Math.PI / 4),
+        yAxisEnd.y + this.options.arrowLength * Math.cos(Math.PI / 4));
+    this.ctx.moveTo(yAxisEnd.x, yAxisEnd.y);
+    this.ctx.lineTo(yAxisEnd.x + this.options.arrowLength * Math.sin(Math.PI / 4),
+        yAxisEnd.y + this.options.arrowLength * Math.cos(Math.PI / 4));
+
+    this.ctx.stroke();
+}
+
+Plot.prototype.drawMajorTicks = function () {
+    let xGap = (this.options.minX - this.options.origin.x) / this.options.xTick;
+    if (xGap < 0) {
+        xGap = -(Math.floor(Math.abs(xGap)));
+    } else {
+        xGap = Math.floor(xGap);
+    }
+    let yGap = (this.options.minY - this.options.origin.y) / this.options.yTick;
+    if (yGap < 0) {
+        yGap = -(Math.floor(Math.abs(yGap)));
+    } else {
+        yGap = Math.floor(yGap);
+    }
+    let posX = this.options.origin.x + xGap * this.options.xTick;
+    let posY = this.options.origin.y + yGap * this.options.yTick;
+    this.ctx.lineWidth = this.options.tickWidth;
+    this.ctx.strokeStyle = this.options.tickColor;
+    this.ctx.beginPath();
+    while (posX < this.options.maxX) {
+        let screenPoint = this.transformToScreenFrame(new Point2D(posX, this.options.origin.y));
+        this.ctx.moveTo(screenPoint.x, screenPoint.y + this.options.tickSize / 2);
+        this.ctx.lineTo(screenPoint.x, screenPoint.y - this.options.tickSize / 2);
+        posX += this.options.xTick;
+    }
+    while (posY < this.options.maxY) {
+        let screenPoint = this.transformToScreenFrame(new Point2D(this.options.origin.x, posY));
+        this.ctx.moveTo(screenPoint.x + this.options.tickSize / 2, screenPoint.y);
+        this.ctx.lineTo(screenPoint.x - this.options.tickSize / 2, screenPoint.y);
+        posY += this.options.yTick;
+    }
+    this.ctx.stroke()
+}
+
+Plot.prototype.drawCross = function (point, crossColor, crossWidth) {
+    let screenPoint = this.transformToScreenFrame(point);
+    // console.log(screenPoint);
+    this.ctx.lineWidth = crossWidth;
+    this.ctx.strokeStyle = crossColor;
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(screenPoint.x - this.options.crossSize / 2, screenPoint.y - this.options.crossSize / 2);
+    this.ctx.lineTo(screenPoint.x + this.options.crossSize / 2, screenPoint.y + this.options.crossSize / 2);
+    this.ctx.moveTo(screenPoint.x - this.options.crossSize / 2, screenPoint.y + this.options.crossSize / 2);
+    this.ctx.lineTo(screenPoint.x + this.options.crossSize / 2, screenPoint.y - this.options.crossSize / 2);
+    this.ctx.stroke();
+}
+
+Plot.prototype.draw = function (points, crossColor, crossWidth) {
+    for (let i = 0; i < points.length; i++) {
+        let point = points[i];
+        // console.log(point);
+        this.drawCross(point);
+    }
+}
+
+Plot.prototype.updateCanvasSize = function () {
+    canvas = this.ctx.canvas;
+    this.graphWidth = canvas.width - this.paddingLeft - this.paddingRight;
+    this.graphHeight = canvas.height - this.paddingTop - this.paddingBtm;
+
+    this.topLeft = new Point2D(this.paddingLeft, this.paddingTop);
+    this.topRight = new Point2D(this.paddingLeft + this.graphWidth, this.paddingTop);
+    this.btmLeft = new Point2D(this.paddingLeft, this.paddingTop + this.graphHeight);
+    this.btmRight = new Point2D(this.paddingLeft + this.graphWidth, this.paddingTop + this.graphHeight);
+}
+
+/************************************************************************/
 var terminal = document.querySelector("#debug-terminal");
 connectBtn.activateListener(setupConnection, teardownConnection);
-window.addEventListener('resize', resizeViz, false)
+
+function initCanvas(canvas) {
+    let width = canvas.parentElement.clientWidth;
+    let height = canvas.parentElement.clientHeight;
+    canvas.setAttribute('width', width);
+    canvas.setAttribute('height', height);
+    return canvas;
+}
+
+var graphRoll = initCanvas(document.querySelector("#roll-graph"));
+var graphPitch = initCanvas(document.querySelector("#pitch-graph"));
+var config = new GraphOptions({ 'minX': 0, 'maxX': 10, 'minY': -3.2, 'maxY': 3.2 });
+var rollPlot = new Plot({}, config, graphRoll);
+var pitchPlot = new Plot({}, config, graphPitch);
+
+var rollReadings = [];
+var pitchReadings = [];
+
+function resizeGraphs() {
+    plots = [rollPlot, pitchPlot];
+    for (let i = 0; i < plots.length; i++) {
+        let canvas = plots[i].ctx.canvas;
+        initCanvas(canvas);
+        plots[i].updateCanvasSize();
+    }
+}
+
+var x = rollPlot.options.minX;
+var points = [];
+console.log(points);
+while (x < rollPlot.options.maxX) {
+    points.push(new Point2D(x, Math.sin(x)));
+    x += 0.1;
+}
+
+function redrawGraph(points, plot) {
+    if (points.length > 0 && points[points.length - 1].x > plot.options.maxX) {
+        console.log("New points out of range. Translating graph by removing old points...");
+        let newMaxX = points[points.length - 1].x + 0.1;
+        let diff = newMaxX - plot.options.maxX;
+        let newMinX = plot.options.minX + diff;
+        let cnt = 0;
+        for (let i = 0; i < points.length; i++) {
+            if (points[i].x < newMinX) cnt++;
+            break;
+        }
+        points.splice(0, cnt);
+        plot.options.minX = newMinX;
+        plot.options.maxX = newMaxX;
+    }
+
+    plot.ctx.clearRect(0, 0, plot.ctx.canvas.width, plot.ctx.canvas.height);
+    plot.drawAxis();
+    plot.drawMajorTicks();
+    plot.draw(points);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    // Javascript frame reference: Roll: -z, Pitch: x, Yaw: -y
+    cube.rotation.x = nextPitch;
+    cube.rotation.y = -nextYaw;
+    cube.rotation.z = -nextRoll;
+    updateHud(cube.rotation);
+    renderer.render(scene, camera);
+
+    // Update real time graph
+    redrawGraph(rollReadings, rollPlot);
+    redrawGraph(pitchReadings, pitchPlot);
+}
+
+window.addEventListener('resize', () => {
+    console.log("Resizing everything");
+    resizeViz();
+    resizeGraphs();
+}, false);
+
 animate();
 resizeViz();
-
-

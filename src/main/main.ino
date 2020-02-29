@@ -117,6 +117,8 @@ void loop() {
   MatrixT<4, 1, float> final = kalmanFilter.filter(update, measurement, timeDelta);
 
   Serial.print("Data: ");
+  Serial.print(millis());
+  Serial.print(",");
   Serial.print(final(0, 0), 5);
   Serial.print(",");
   Serial.println(final(2, 0), 5);
