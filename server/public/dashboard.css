@@ -18785,7 +18785,7 @@ Copyright (c) 2015 Daniel Eden
 }
 
 .card .card-title {
-    margin-bottom: .75rem;
+    margin-bottom: .5rem;
 }
 
 .card .card-body {
@@ -19063,6 +19063,8 @@ Copyright (c) 2015 Daniel Eden
 .card-chart .card-body {
     padding-left: 5px;
     padding-right: 5px;
+    padding-top: 0px;
+    padding-bottom: 0px;
 }
 
 .card-chart .card-body .tab-space {

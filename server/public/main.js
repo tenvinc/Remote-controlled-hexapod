@@ -251,29 +251,32 @@ var GraphOptions = function (options) {
     if (options === undefined) {
         options = {};
     }
-    this.minX = (options.minX) ? options.minX : -10;
-    this.maxX = (options.maxX) ? options.maxX : 10;
-    this.minY = (options.minY) ? options.minY : -2;
-    this.maxY = (options.maxY) ? options.maxY : 2;
-    let originX = (options.originX) ? options.originX : 0;
-    let originY = (options.originY) ? options.originY : 0;
+    this.minX = (options.minX !== undefined) ? options.minX : -10;
+    this.maxX = (options.maxX !== undefined) ? options.maxX : 10;
+    this.minY = (options.minY !== undefined) ? options.minY : -2;
+    this.maxY = (options.maxY !== undefined) ? options.maxY : 2;
+    let originX = (options.originX !== undefined) ? options.originX : 0;
+    let originY = (options.originY !== undefined) ? options.originY : 0;
     this.origin = new Point2D(originX, originY);
 
-    this.xTick = (options.xTick) ? options.xTick : (this.maxX - this.minX) / 10;
-    this.yTick = (options.yTick) ? options.yTick : (this.maxY - this.minY) / 10;
+    this.xTick = (options.xTick !== undefined) ? options.xTick : (this.maxX - this.minX) / 10;
+    this.yTick = (options.yTick !== undefined) ? options.yTick : (this.maxY - this.minY) / 10;
 
-    this.tickColor = (options.tickColor) ? options.tickColor : 'white';
-    this.tickSize = (options.tickSize) ? options.tickSize : 10;
-    this.tickWidth = (options.tickWidth) ? options.tickWidth : 3;
+    this.tickColor = (options.tickColor !== undefined) ? options.tickColor : 'white';
+    this.tickSize = (options.tickSize !== undefined) ? options.tickSize : 10;
+    this.tickWidth = (options.tickWidth !== undefined) ? options.tickWidth : 3;
 
-    this.crossSize = (options.crossSize) ? options.crossSize : 2;
+    this.crossSize = (options.crossSize !== undefined) ? options.crossSize : 2;
 
-    this.arrowColor = (options.arrowColor) ? options.arrowColor : 'white';
-    this.arrowLength = (options.arrowLength) ? options.arrowLength : 10;
-    this.arrowWidth = (options.arrowWidth) ? options.arrowWidth : 3;
+    this.arrowColor = (options.arrowColor !== undefined) ? options.arrowColor : 'white';
+    this.arrowLength = (options.arrowLength !== undefined) ? options.arrowLength : 10;
+    this.arrowWidth = (options.arrowWidth !== undefined) ? options.arrowWidth : 3;
 
-    this.axisColor = (options.axisColor) ? options.axisColor : 'white';
-    this.axisWidth = (options.axisWidth) ? options.axisWidth : 3;
+    this.axisColor = (options.axisColor !== undefined) ? options.axisColor : 'white';
+    this.axisWidth = (options.axisWidth !== undefined) ? options.axisWidth : 3;
+
+    this.textFont = (options.textFont !== undefined) ? options.textFont : '10px sans-serif';
+    this.textColor = (options.textColor !== undefined) ? options.textColor : 'white';
 }
 
 var Plot = function (params, options, canvas) {
@@ -283,10 +286,10 @@ var Plot = function (params, options, canvas) {
     this.options = options;
 
     // padding measured in pixels
-    this.paddingLeft = (params.paddingLeft) ? params.paddingLeft : 20;
-    this.paddingRight = (params.paddingRight) ? params.paddingRight : 20;
-    this.paddingTop = (params.paddingTop) ? params.paddingTop : 20;
-    this.paddingBtm = (params.paddingBtm) ? params.paddingBtm : 20;
+    this.paddingLeft = (params.paddingLeft) ? params.paddingLeft : 30;
+    this.paddingRight = (params.paddingRight) ? params.paddingRight : 30;
+    this.paddingTop = (params.paddingTop) ? params.paddingTop : 10;
+    this.paddingBtm = (params.paddingBtm) ? params.paddingBtm : 10;
 
     this.graphWidth = canvas.width - this.paddingLeft - this.paddingRight;
     this.graphHeight = canvas.height - this.paddingTop - this.paddingBtm;
@@ -369,15 +372,21 @@ Plot.prototype.drawMajorTicks = function () {
         let screenPoint = this.transformToScreenFrame(new Point2D(posX, this.options.origin.y));
         this.ctx.moveTo(screenPoint.x, screenPoint.y + this.options.tickSize / 2);
         this.ctx.lineTo(screenPoint.x, screenPoint.y - this.options.tickSize / 2);
+        this.ctx.font = this.options.textFont;
+        this.ctx.fillStyle = this.options.textColor;
+        this.ctx.fillText(posX.toFixed(2), screenPoint.x, screenPoint.y + this.options.tickSize/2 + 10);
         posX += this.options.xTick;
     }
     while (posY < this.options.maxY) {
         let screenPoint = this.transformToScreenFrame(new Point2D(this.options.origin.x, posY));
         this.ctx.moveTo(screenPoint.x + this.options.tickSize / 2, screenPoint.y);
         this.ctx.lineTo(screenPoint.x - this.options.tickSize / 2, screenPoint.y);
+        this.ctx.font = this.options.textFont;
+        this.ctx.fillStyle = this.options.textColor;
+        this.ctx.fillText(posY.toFixed(2), screenPoint.x - this.options.tickSize/2 - 25, screenPoint.y);
         posY += this.options.yTick;
     }
-    this.ctx.stroke()
+    this.ctx.stroke();
 }
 
 Plot.prototype.drawCross = function (point, crossColor, crossWidth) {
@@ -418,8 +427,13 @@ var terminal = document.querySelector("#debug-terminal");
 connectBtn.activateListener(setupConnection, teardownConnection);
 
 function initCanvas(canvas) {
+    // Do twice to cater to the flex grow factor
     let width = canvas.parentElement.clientWidth;
     let height = canvas.parentElement.clientHeight;
+    canvas.setAttribute('width', width);
+    canvas.setAttribute('height', height);
+    width = canvas.parentElement.clientWidth;
+    height = canvas.parentElement.clientHeight;
     canvas.setAttribute('width', width);
     canvas.setAttribute('height', height);
     return canvas;
@@ -427,15 +441,18 @@ function initCanvas(canvas) {
 
 var graphRoll = initCanvas(document.querySelector("#roll-graph"));
 var graphPitch = initCanvas(document.querySelector("#pitch-graph"));
-var config = new GraphOptions({ 'minX': 0, 'maxX': 10, 'minY': -3.2, 'maxY': 3.2 });
+var graphYaw = initCanvas(document.querySelector("#yaw-graph"));
+var config = new GraphOptions({'minX': 0, 'maxX': 5, 'minY': -3.2, 'maxY': 3.2, 'yTick': 0.5, 'crossSize': 0.5});
 var rollPlot = new Plot({}, config, graphRoll);
 var pitchPlot = new Plot({}, config, graphPitch);
+var yawPlot = new Plot({}, config, graphYaw);
 
 var rollReadings = [];
 var pitchReadings = [];
+var yawReadings = [];
 
 function resizeGraphs() {
-    plots = [rollPlot, pitchPlot];
+    plots = [rollPlot, pitchPlot, yawPlot];
     for (let i = 0; i < plots.length; i++) {
         let canvas = plots[i].ctx.canvas;
         initCanvas(canvas);
@@ -485,6 +502,7 @@ function animate() {
     // Update real time graph
     redrawGraph(rollReadings, rollPlot);
     redrawGraph(pitchReadings, pitchPlot);
+    redrawGraph(yawReadings, yawPlot);
 }
 
 window.addEventListener('resize', () => {
