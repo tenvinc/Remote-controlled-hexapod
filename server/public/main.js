@@ -52,9 +52,9 @@ var hudYaw = vizBody.querySelector("#hud-yaw");
 
 function updateHud(rotation) {
     // Javascript frame reference: Roll: z, Pitch: x, Yaw: y
-    let rollDegrees = (rotation.z / 2 * Math.PI) * 360;
-    let pitchDegrees = (rotation.x / 2 * Math.PI) * 360;
-    let yawDegrees = (rotation.y / 2 * Math.PI) * 360;
+    let rollDegrees = (rotation.z / (2 * Math.PI)) * 360;
+    let pitchDegrees = (rotation.x / (2 * Math.PI)) * 360;
+    let yawDegrees = (rotation.y / (2 * Math.PI)) * 360;
 
     // Restrict range to [0, 360]
     rollDegrees = rollDegrees - Math.floor(rollDegrees / 360) * 360;
@@ -442,7 +442,7 @@ function initCanvas(canvas) {
 var graphRoll = initCanvas(document.querySelector("#roll-graph"));
 var graphPitch = initCanvas(document.querySelector("#pitch-graph"));
 var graphYaw = initCanvas(document.querySelector("#yaw-graph"));
-var config = new GraphOptions({'minX': 0, 'maxX': 5, 'minY': -3.2, 'maxY': 3.2, 'yTick': 0.5, 'crossSize': 0.5});
+var config = new GraphOptions({'minX': 0, 'maxX': 5, 'minY': -3.14, 'maxY': 3.14, 'yTick': 0.5, 'crossSize': 0.5});
 var rollPlot = new Plot({}, config, graphRoll);
 var pitchPlot = new Plot({}, config, graphPitch);
 var yawPlot = new Plot({}, config, graphYaw);

@@ -13,16 +13,16 @@ public:
   mutable MatrixT<xDim> xKMinus;       // Store running value of state vector
 
   KalmanFilter<xDim, uDim, zDim, ElemT> (): xKMinus() {
-    pKMinus = {0, 0, 0, 0,
-              0, 0, 0, 0,
-              0, 0, 0, 0,
-              0, 0, 0, 0};
-    R = {30, 0,
-        0, 30};
-    Q = {5, 0, 0, 0,
-         0, 5, 0, 0,
-         0, 0, 5, 0,
-         0, 0, 0, 5};
+    pKMinus = {1, 0, 0, 0,
+              0, 1, 0, 0,
+              0, 0, 1, 0,
+              0, 0, 0, 1};
+    R = {100, 0,
+        0, 50};
+    Q = {1, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 1};
     H = {1, 0, 0, 0,
         0, 0, 1, 0};
   }
