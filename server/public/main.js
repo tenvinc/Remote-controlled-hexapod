@@ -1,19 +1,48 @@
 /************************** Constants declaration ************************************/
 const MAX_MESSAGES_CNT = 50;
 const SERVER_URI = "ws://localhost:8080";
-const DEFAULT_CAM_POS = 2;
+const DEFAULT_CAM_POS = 20;
 
 /************************** 3D modelling stuff ***************************************/
+const loader = new THREE.GLTFLoader();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,
     0.1, 1000);
 
+var light = new THREE.PointLight(0xc4c4c4, 5);
+light.position.set(0, 300, 500);
+scene.add(light);
+
+var light2 = new THREE.PointLight(0xc4c4c4, 5);
+light2.position.set(500, 100, 0);
+scene.add(light2);
+
+var light3 = new THREE.PointLight(0xc4c4c4, 5);
+light3.position.set(0, 100, -500);
+scene.add(light3);
+
+var light4 = new THREE.PointLight(0xc4c4c4, 5);
+light4.position.set(-500, 300, 0);
+scene.add(light4);
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const vizBody = document.getElementById("viz-body");
-const geometry = new THREE.BoxGeometry(2, 0.2, 1);
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+var model;
+loader.load('./robot_hand.gltf', function(gltf) {
+    model = gltf.scene;
+    model.scale.set(0.1, 0.1, 0.1);
+    console.log(gltf.scene);
+    scene.add(model);
+    animate();
+},
+// called while loading is progressing
+function ( xhr ) {
+    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+},
+// called when loading has errors
+function ( error ) {
+    console.log( 'An error happened: ' + error);
+});
 
 var nextRoll = 0;
 var nextPitch = 0;
@@ -493,10 +522,10 @@ function redrawGraph(points, plot) {
 function animate() {
     requestAnimationFrame(animate);
     // Javascript frame reference: Roll: -z, Pitch: x, Yaw: -y
-    cube.rotation.x = nextPitch;
-    cube.rotation.y = -nextYaw;
-    cube.rotation.z = -nextRoll;
-    updateHud(cube.rotation);
+    model.rotation.x = nextPitch;
+    model.rotation.y = -nextYaw;
+    model.rotation.z = -nextRoll;
+    updateHud(model.rotation);
     renderer.render(scene, camera);
 
     // Update real time graph
@@ -511,5 +540,4 @@ window.addEventListener('resize', () => {
     resizeGraphs();
 }, false);
 
-animate();
 resizeViz();
