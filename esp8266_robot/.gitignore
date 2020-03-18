@@ -18,14 +18,4 @@
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 build/*
-server/node_modules/*
-src/.vscode/
-!src/.vscode/arduino.json
-!src/.vscode/c_cpp_properties.json
-!src/.vscode/settings.json
-
-esp8266_glove/.vscode/
-
-esp-open-rtos
-
-esp8266_robot/.vscode/
+firmware/*
