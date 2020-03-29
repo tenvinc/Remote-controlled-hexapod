@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
+#include <i2c.h>
 #include <stdint.h>
-#include <i2c/i2c.h>
 
 #ifdef __cplusplus
 }
@@ -115,6 +115,8 @@ extern "C" {
 #define MPU9250_ZA_OFFSET_H 0x7D
 #define MPU9250_ZA_OFFSET_L 0x7E
 /** Magnetometer Registers **/
+#define MPU9250_AK8963_I2C_ADDR 0x0C  // Magnetometer is on a separate die
+/** Read only registers **/
 #define MPU9250_MAG_WIA 0x00
 #define MPU9250_MAG_INFO 0x01
 #define MPU9250_MAG_ST1 0x02
@@ -125,44 +127,61 @@ extern "C" {
 #define MPU9250_MAG_HZL 0x07
 #define MPU9250_MAG_HZH 0x08
 #define MPU9250_MAG_ST2 0x09
-#define MPU9250_MAG_CNTL 0x0A
-#define MPU9250_MAG_ASTC 0x0C
-#define MPU9250_MAG_I2CDIS 0x0F
+
 #define MPU9250_MAG_ASAX 0x10
 #define MPU9250_MAG_ASAY 0x11
 #define MPU9250_MAG_ASAZ 0x12
+/** Write/read **/
+#define MPU9250_MAG_CNTL1 0x0A
+#define MPU9250_MAG_CNTL2 0x0B
+#define MPU9250_MAG_ASTC 0x0C
+#define MPU9250_MAG_I2CDIS 0x0F
 /***************** (END) MOU9250 Device Registers ************************/
 
-typedef enum
-{
+#define G 9.807f
+
+#define CLOCK_SEL_PLL 0x01
+#define I2C_MST_EN 0X20
+#define I2C_MST_CLK 0x0D
+#define PWR_RESET 0X80
+#define ALL_SEN_EN 0x00
+#define INT_PULSE_50US 0x00
+#define I2C_READ_FLAG 0x80
+#define I2C_SLV0_EN 0x80
+#define AK8963_PWR_DOWN 0x00
+#define AK8963_RESET 0x01
+#define AK8963_FUSE_ROM 0x0F
+#define AK8963_CNT_MEAS1 0x12
+#define AK8963_CNT_MEAS2 0x16
+#define INT_RAW_RDY_EN 0x01
+#define INT_DISABLE 0x00
+
+typedef enum {
   ACCEL_RANGE_2G,
   ACCEL_RANGE_4G,
   ACCEL_RANGE_8G,
   ACCEL_RANGE_16G
 } AccelRange;
 
-typedef enum
-{
+typedef enum {
   GYRO_RANGE_250DPS,
   GYRO_RANGE_500DPS,
   GYRO_RANGE_1000DPS,
   GYRO_RANGE_2000DPS
 } GyroRange;
 
-typedef enum
-{
+typedef enum {
   DLPF_BANDWIDTH_184HZ,
   DLPF_BANDWIDTH_92HZ,
   DLPF_BANDWIDTH_41HZ,
   DLPF_BANDWIDTH_20HZ,
   DLPF_BANDWIDTH_10HZ,
   DLPF_BANDWIDTH_5HZ,
-  DLPF_BANDWIDTH_OFF // this enum does not map to anything in the register map
+  DLPF_BANDWIDTH_OFF  // this enum does not map to anything in the register map
 } DlpfBandwidth;
 
-typedef enum
-{
-  LP_ACCEL_ODR_0_24HZ = 0, //0_24 represents 0.24
+typedef enum {
+  LP_ACCEL_ODR_0_24HZ = 0,  // 0_24 represents 0.24
   LP_ACCEL_ODR_0_49HZ = 1,
   LP_ACCEL_ODR_0_98HZ = 2,
   LP_ACCEL_ODR_1_95HZ = 3,
@@ -174,16 +193,16 @@ typedef enum
   LP_ACCEL_ODR_125HZ = 9,
   LP_ACCEL_ODR_250HZ = 10,
   LP_ACCEL_ODR_500HZ = 11,
-  LP_ACCEL_ODR_OFF = 12, // this enum does not map to anything in the register map
+  LP_ACCEL_ODR_OFF =
+      12,  // this enum does not map to anything in the register map
 } LpAccODR;
 
-typedef enum
-{
-  FIFO_BUF_OVERFLOW_OVERWRITE, // will overwrite oldest data
+typedef enum {
+  FIFO_BUF_OVERFLOW_OVERWRITE,  // will overwrite oldest data
   FIFO_BUF_OVERFLOW_NO_WRITE
 } FifoBufOverflow;
 
-typedef enum{
+typedef enum {
   ACCX_DIS = 0x20,
   ACCY_DIS = 0x10,
   ACCZ_DIS = 0x08,
@@ -201,13 +220,9 @@ typedef enum {
   ACCEL_EN = 0x08
 } FifoEnable;
 
-typedef enum {
-  MPU9250_ERR_OK,
-  MPU9250_ERR
-} mpu9250_err_t;
+typedef enum { MPU9250_ERR_OK, MPU9250_ERR } mpu9250_err_t;
 
-typedef struct MPU9250Config
-{
+typedef struct MPU9250Config {
   uint8_t accelDisabled;
   uint8_t gyroDisabled;
   uint8_t accelRange;
@@ -219,27 +234,114 @@ typedef struct MPU9250Config
   uint8_t fifoBufOverflow;
 } MPU9250Config_t;
 
-class MPU9250Core
-{
-public:
+typedef struct MagScale {
+  float x;
+  float y;
+  float z;
+} MagScale_t;
+
+typedef struct AccelRaw {
+  int16_t x;
+  int16_t y;
+  int16_t z;
+} AccelRaw_t;
+
+typedef struct AccelFloat {
+  float x;
+  float y;
+  float z;
+} AccelFloat_t;
+
+typedef struct GyroRaw {
+  int16_t x;
+  int16_t y;
+  int16_t z;
+} GyroRaw_t;
+
+typedef struct GyroFloat {
+  float x;
+  float y;
+  float z;
+} GyroFloat_t;
+
+typedef struct MagRaw {
+  float x;
+  float y;
+  float z;
+} MagRaw_t;
+
+typedef struct MagFloat {
+  float x;
+  float y;
+  float z;
+} MagFloat_t;
+
+class MPU9250Core {
+ protected:
   MPU9250Core(i2c_dev_t dev);
   int beginCore();
+  mpu9250_err_t writeRegister(const uint8_t regAddr, const uint8_t data);
   mpu9250_err_t writeRegister(const uint8_t regAddr, const uint8_t *data);
-  mpu9250_err_t readRegisters(const uint8_t *startAddr, uint8_t len, uint8_t *buf);
+  mpu9250_err_t readRegisters(const uint8_t *startAddr, uint8_t len,
+                              uint8_t *buf);
+  mpu9250_err_t readRegister(const uint8_t regAddr, uint8_t *buf);
 
-private:
+ private:
   MPU9250Config_t config;
   i2c_dev_t dev;
 };
 
-class MPU9250 : public MPU9250Core
-{
-public:
+class MPU9250 : public MPU9250Core {
+ public:
   MPU9250(i2c_dev_t &i2c, MPU9250Config_t *pConfigToPassIn);
+  mpu9250_err_t writeAK8963Register(uint8_t subAddr, uint8_t data);
+  mpu9250_err_t readAK8963Registers(uint8_t subAddr, uint8_t count,
+                                    uint8_t *buf);
+  mpu9250_err_t readAK8963Register(uint8_t subAddr, uint8_t *buf);
   int begin();
+  uint8_t whoAmI(void);
+  uint8_t whoAmIAK8963(void);
+  mpu9250_err_t setAccelRange(uint8_t range);
+  mpu9250_err_t setGyroRange(uint8_t range);
+  mpu9250_err_t setDlpfBW(uint8_t bandwidth);
+  mpu9250_err_t enableDRInterrupt();  // enable Data Ready interrupt
+  mpu9250_err_t disableDRInterrupt();  // disable Data Ready Interrupt
+  mpu9250_err_t readSensors();
 
-private:
+  // Getters for sensor readings after a readSensor call
+  float getXAccelMs2();
+  float getYAccelMs2();
+  float getZAccelMs2();
+  float getXGyroDps();
+  float getYGyroDps();
+  float getZGyroDps();
+  float getMagXuT();
+  float getMagYuT();
+  float getMagZuT();
+
+  int16_t getXAccelRaw();
+  int16_t getYAccelRaw();
+  int16_t getZAccelRaw();
+  int16_t getXGyroRaw();
+  int16_t getYGyroRaw();
+  int16_t getZGyroRaw();
+  int16_t getXMagRaw();
+  int16_t getYMagRaw();
+  int16_t getZMagRaw();
+
+ private:
   MPU9250Config_t config;
+  float _accelScale;
+  float _gyroScale;
+  MagScale_t _magScale;
+  uint8_t _buffer[64];
+  AccelRaw_t _aRaw;
+  AccelFloat_t _aFloat;
+  GyroRaw_t _gRaw;
+  GyroFloat_t _gFloat;
+  MagRaw_t _mRaw;
+  MagFloat_t _mFloat;
+  int16_t _tRaw;
 };
 
 #endif
