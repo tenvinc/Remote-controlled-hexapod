@@ -1,14 +1,15 @@
 #include "MPU9250.h"
+
+#include <stdio.h>
+
 #include "espressif/esp_common.h"
 
-// Uncomment to get debugging messages
-#define MPU9250_DEBUG
+#define MPU9250_DEBUG 0
 
-#ifdef MPU9250_DEBUG
+#if MPU9250_DEBUG
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stdio.h>
 #ifdef __cplusplus
 }
 #endif
@@ -40,7 +41,7 @@ mpu9250_err_t MPU9250Core::writeRegister(const uint8_t regAddr,
     debug("Error in writeRegister op.");
     return MPU9250_ERR;
   }
-  sdk_os_delay_us(10000);  // to let changes update
+  sdk_os_delay_us(1000);  // to let changes update
 
   uint8_t buf;
   uint8_t attempts = 0;
@@ -58,17 +59,47 @@ mpu9250_err_t MPU9250Core::readRegisters(const uint8_t *startAddr, uint8_t len,
                                          uint8_t *buf) {
   int err = i2c_slave_read(dev.bus, dev.addr, startAddr, buf, len);
   debug("%d bytes read from reg %x.", len, *startAddr);
-  for (int i=0; i<len; i++) {
-    printf("%x ", buf[i]);
-  }
-  printf("\n");
   return err != 0 ? MPU9250_ERR : MPU9250_ERR_OK;
 }
+
+#if !USE_MPU9250_MASTER_I2C
+mpu9250_err_t MPU9250Core::_writeAK8963Register(uint8_t regAddr, uint8_t data) {
+  debug("WRITING Dev bus:%d, Addr: %x, Register: %x, Data: %x\n", dev.bus,
+        MPU9250_AK8963_I2C_ADDR, regAddr, data);
+  int err =
+      i2c_slave_write(dev.bus, MPU9250_AK8963_I2C_ADDR, &regAddr, &data, 1);
+  if (err != 0) {
+    debug("Error in writeRegister op.");
+    return MPU9250_ERR;
+  }
+  sdk_os_delay_us(1000);  // to let changes update
+
+  uint8_t buf;
+  uint8_t attempts = 0;
+  while (attempts < 5) {
+    if (_readAK8963Registers(&regAddr, 1, &buf) == 0) break;
+    attempts++;
+  }
+  if (attempts >= 5 || buf != data) {
+    return MPU9250_ERR;
+  }
+  return MPU9250_ERR_OK;
+}
+
+mpu9250_err_t MPU9250Core::_readAK8963Registers(const uint8_t *startAddr,
+                                                uint8_t len, uint8_t *buf) {
+  int err =
+      i2c_slave_read(dev.bus, MPU9250_AK8963_I2C_ADDR, startAddr, buf, len);
+  debug("%d bytes read from reg %x.", len, *startAddr);
+  return err != 0 ? MPU9250_ERR : MPU9250_ERR_OK;
+}
+#endif
 
 mpu9250_err_t MPU9250Core::readRegister(const uint8_t regAddr, uint8_t *buf) {
   return readRegisters(&regAddr, 1, buf);
 }
 
+#if USE_MPU9250_MASTER_I2C
 mpu9250_err_t MPU9250::writeAK8963Register(uint8_t subAddr, uint8_t data) {
   // set slave 0 to the AK8963 and set for write
   if (writeRegister(MPU9250_I2C_SLV0_ADDR, MPU9250_AK8963_I2C_ADDR) != 0) {
@@ -87,10 +118,13 @@ mpu9250_err_t MPU9250::writeAK8963Register(uint8_t subAddr, uint8_t data) {
     return MPU9250_ERR;
   }
 
+  sdk_os_delay_us(1000);
+
   // read the register and confirm
   if (readAK8963Registers(subAddr, 1, _buffer) < 0) {
     return MPU9250_ERR;
   }
+  debug("Double check: %x.", _buffer[0]);
   return _buffer[0] == data ? MPU9250_ERR_OK : MPU9250_ERR;
 }
 
@@ -108,12 +142,22 @@ mpu9250_err_t MPU9250::readAK8963Registers(uint8_t subAddr, uint8_t count,
   if (writeRegister(MPU9250_I2C_SLV0_CTRL, I2C_SLV0_EN | count) < 0) {
     return MPU9250_ERR;
   }
-  sdk_os_delay_us(2000000);  // takes some time for these registers to fill
+  sdk_os_delay_us(1000);  // takes some time for these registers to fill
 
   // read the bytes off the MPU9250 EXT_SENS_DATA registers
   uint8_t startAddr = MPU9250_EXT_SENS_DATA_00;
   return readRegisters(&startAddr, count, buf);
 }
+#else  // Use only in bypass mode
+mpu9250_err_t MPU9250::writeAK8963Register(uint8_t subAddr, uint8_t data) {
+  return _writeAK8963Register(subAddr, data);
+}
+
+mpu9250_err_t MPU9250::readAK8963Registers(uint8_t subAddr, uint8_t count,
+                                           uint8_t *buf) {
+  return _readAK8963Registers(&subAddr, count, buf);
+}
+#endif
 
 mpu9250_err_t MPU9250::readAK8963Register(uint8_t subAddr, uint8_t *buf) {
   return readAK8963Registers(subAddr, 1, buf);
@@ -135,22 +179,35 @@ MPU9250::MPU9250(i2c_dev_t &i2c, MPU9250Config_t *pConfigToPassIn)
 }
 
 int MPU9250::begin() {
-  // sanity check
-  if (whoAmI() != 0x71) {
+  // Do hardware reset of MPU9250 and AK8963
+  writeRegister(MPU9250_PWR_MGMT_1, (uint8_t)PWR_RESET);
+
+#if USE_MPU9250_MASTER_I2C
+  // Enable I2C master mode (needed for AK8963)
+  if (writeRegister(MPU9250_USER_CTRL, (uint8_t)I2C_MST_EN) != 0) {
     return MPU9250_ERR;
   }
+#else
+  if (writeRegister(MPU9250_USER_CTRL, (uint8_t)I2C_MST_DIS) != 0) {
+    return MPU9250_ERR;
+  }
+  if (writeRegister(MPU9250_INT_PIN_CFG, (uint8_t)I2C_INT_BYPASS) != 0) {
+    return MPU9250_ERR;
+  }
+#endif
 
-  writeRegister(MPU9250_PWR_MGMT_1, (uint8_t)PWR_RESET);
+  debug("Resetting AK8963");
+  writeAK8963Register(MPU9250_MAG_CNTL2, AK8963_RESET);
   sdk_os_delay_us(1000);  // wait for reset to finish
+
+  // whoAmI for main unit and AK8963
+  if (whoAmI() != 0x71 || whoAmIAK8963() != 0x48) {
+    return MPU9250_ERR;
+  }
 
   /** Setup main unit(gyro and accel) **/
   // Select clock automatically and enable all sensors
   if (writeRegister(MPU9250_PWR_MGMT_1, (uint8_t)CLOCK_SEL_PLL) != 0) {
-    return MPU9250_ERR;
-  }
-
-  // Enable I2C master mode
-  if (writeRegister(MPU9250_USER_CTRL, (uint8_t)I2C_MST_EN) != 0) {
     return MPU9250_ERR;
   }
 
@@ -175,41 +232,30 @@ int MPU9250::begin() {
     return MPU9250_ERR;
   }
 
-  /** setup magnetometer **/
-  // check AK8963 WHO AM I register, expected value is 0x48 (decimal 72)
-  if (whoAmIAK8963() != 0x48) {
-    return MPU9250_ERR;
-  }
-
-  debug("It should reach here.");
-
-  writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_PWR_DOWN);
-  sdk_os_delay_us(100 * 1000);  // long wait between AK8963 mode changes
-
+  /** Setup magnetometer **/
+  debug("Setting FUSE ROM mode...");
   // set AK8963 to FUSE ROM access
-  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_FUSE_ROM) < 0) {
+  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_FUSE_ROM) != 0) {
     return MPU9250_ERR;
   }
   sdk_os_delay_us(100 * 1000);  // long wait between AK8963 mode changes
+  if (readAK8963Registers(MPU9250_MAG_ASAX, 3, _buffer) != 0) {
+    return MPU9250_ERR;
+  }
   // read the AK8963 ASA registers and compute magnetometer scale factors
-
-  readAK8963Registers(MPU9250_MAG_ASAX, 3, _buffer);
-  debug("Read values mag: %u, %u, %u", _buffer[0], _buffer[1], _buffer[2]);
   _magScale.x = ((((float)_buffer[0]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f /
                 32760.0f;  // micro Tesla
   _magScale.y = ((((float)_buffer[1]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f /
                 32760.0f;  // micro Tesla
   _magScale.z = ((((float)_buffer[2]) - 128.0f) / (256.0f) + 1.0f) * 4912.0f /
                 32760.0f;  // micro Tesla
-
-  // set AK8963 to Power Down
-  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_PWR_DOWN) < 0) {
+  // Power down then activate continuous 16 bit mode
+  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_PWR_DOWN) != 0) {
     return MPU9250_ERR;
   }
   sdk_os_delay_us(100 * 1000);  // long wait between AK8963 mode changes
-
   // set AK8963 to 16 bit resolution, 100 Hz update rate
-  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_CNT_MEAS2) < 0) {
+  if (writeAK8963Register(MPU9250_MAG_CNTL1, AK8963_CNT_MEAS2) != 0) {
     return MPU9250_ERR;
   }
   sdk_os_delay_us(100 * 1000);  // long wait between AK8963 mode changes
@@ -362,22 +408,49 @@ mpu9250_err_t MPU9250::disableDRInterrupt() {
 mpu9250_err_t MPU9250::readSensors() {
   // Start from ACCEL_XOUT_H and read till EXT_SENS_DATA_07
   uint8_t startReg = MPU9250_ACCEL_XOUT_H;
+  bool magValid = true;
+  bool accgygroValid = true;  // Accelerometer and gyroscope
+#if USE_MPU9250_MASTER_I2C
   if (readRegisters(&startReg, 21, _buffer)) {
     return MPU9250_ERR;
   }
+#else
+  if (readRegisters(&startReg, 14, _buffer) != 0) {
+    return MPU9250_ERR;
+  }
+  uint8_t rdy_flag;
+  // Only read data when it is ready
+  if (readAK8963Register(MPU9250_MAG_ST1, &rdy_flag) != 0) {
+    return MPU9250_ERR;
+  } else if (rdy_flag & AK8963_DATA_READY_MSK) {
+    uint8_t ovf_flag;
+    if (readAK8963Registers(MPU9250_MAG_HXL, 6, _buffer + 14) != 0) {
+      return MPU9250_ERR;
+    }
+    if (readAK8963Register(MPU9250_MAG_ST2, &ovf_flag) != 0) {
+      return MPU9250_ERR;
+    } else if (ovf_flag & AK8963_MAG_OVF_MSK != 0) {
+      magValid = false;
+    } 
+  } else {
+    magValid = false;
+  }
+#endif
 
-  _aRaw.x = (((int16_t)_buffer[0]) << 8) | _buffer[1];
-  _aRaw.y = (((int16_t)_buffer[2]) << 8) | _buffer[3];
-  _aRaw.z = (((int16_t)_buffer[4]) << 8) | _buffer[5];
-  _tRaw = (((int16_t)_buffer[6]) << 8) | _buffer[7];
-  _gRaw.x = (((int16_t)_buffer[8]) << 8) | _buffer[9];
-  _gRaw.y = (((int16_t)_buffer[10]) << 8) | _buffer[11];
-  _gRaw.z = (((int16_t)_buffer[12]) << 8) | _buffer[13];
-  _mRaw.x = (((int16_t)_buffer[15]) << 8) | _buffer[14];
-  _mRaw.y = (((int16_t)_buffer[17]) << 8) | _buffer[16];
-  _mRaw.z = (((int16_t)_buffer[19]) << 8) | _buffer[18];
-
-  debug("Mag Raw: %d, %d, %d", _mRaw.x, _mRaw.y, _mRaw.z);
+  if (accgygroValid) {
+    _aRaw.x = (((int16_t)_buffer[0]) << 8) | _buffer[1];
+    _aRaw.y = (((int16_t)_buffer[2]) << 8) | _buffer[3];
+    _aRaw.z = (((int16_t)_buffer[4]) << 8) | _buffer[5];
+    _tRaw = (((int16_t)_buffer[6]) << 8) | _buffer[7];
+    _gRaw.x = (((int16_t)_buffer[8]) << 8) | _buffer[9];
+    _gRaw.y = (((int16_t)_buffer[10]) << 8) | _buffer[11];
+    _gRaw.z = (((int16_t)_buffer[12]) << 8) | _buffer[13];
+  }
+  if (magValid) {
+    _mRaw.x = (((int16_t)_buffer[15]) << 8) | _buffer[14];
+    _mRaw.y = (((int16_t)_buffer[17]) << 8) | _buffer[16];
+    _mRaw.z = (((int16_t)_buffer[19]) << 8) | _buffer[18];
+  }
 
   // transform and convert to float values
   _aFloat.x = (float)(tX[0] * _aRaw.x + tX[1] * _aRaw.y + tX[2] * _aRaw.z) *

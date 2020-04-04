@@ -29,7 +29,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-//#define I2C_DEBUG true
+//#define I2C_DEBUG 1
 
 #ifdef I2C_DEBUG
 #include <stdio.h>
@@ -132,15 +132,11 @@ int i2c_init_hz(uint8_t bus, uint8_t scl_pin, uint8_t sda_pin, uint32_t freq)
     // Just to prevent these pins floating too much if not connected.
     gpio_set_pullup(scl_pin, 1, 1);
     gpio_set_pullup(sda_pin, 1, 1);
-
-    // Supposed to use GPIO_OUT_OPEN_DRAIN.
-    // But for some reason, GPIO_OUT_OPEN_DRAIN did not work
-    gpio_enable(scl_pin, GPIO_OUTPUT);
-    gpio_enable(sda_pin, GPIO_OUTPUT);
+    gpio_enable(scl_pin, GPIO_OUT_OPEN_DRAIN);
+    gpio_enable(sda_pin, GPIO_OUT_OPEN_DRAIN);
 
     // I2C bus idle state.
-    gpio_write(scl_pin, 1);
-    gpio_write(sda_pin, 1);
+    GPIO.ENABLE_OUT_SET = i2c_bus[bus].g_scl_mask | i2c_bus[bus].g_sda_mask;
 
     // Inform user if the desired frequency is not supported.
     if (i2c_set_frequency_hz(bus, freq) != 0) {
@@ -221,7 +217,7 @@ static inline void clear_scl(uint8_t bus)
 #if I2C_USE_GPIO16 == 1
     gpio_write(i2c_bus[bus].g_scl_pin, 0);
 #else
-    GPIO.OUT_CLEAR = i2c_bus[bus].g_scl_mask;
+    GPIO.ENABLE_OUT_SET = i2c_bus[bus].g_scl_mask;
 #endif
 }
 
@@ -231,7 +227,7 @@ static inline void clear_sda(uint8_t bus)
 #if I2C_USE_GPIO16 == 1
     gpio_write(i2c_bus[bus].g_sda_pin, 0);
 #else
-    GPIO.OUT_CLEAR = i2c_bus[bus].g_sda_mask;
+    GPIO.ENABLE_OUT_SET = i2c_bus[bus].g_sda_mask;
 #endif
 }
 
@@ -242,7 +238,7 @@ static void set_scl(uint8_t bus)
 #if I2C_USE_GPIO16 == 1
     gpio_write(i2c_bus[bus].g_scl_pin, 1);
 #else
-    GPIO.OUT_SET = i2c_bus[bus].g_scl_mask;
+    GPIO.ENABLE_OUT_CLEAR = i2c_bus[bus].g_scl_mask;
 #endif
 
     // Clock stretching.
@@ -282,7 +278,7 @@ static inline void set_sda(uint8_t bus)
 #if I2C_USE_GPIO16 == 1
     gpio_write(i2c_bus[bus].g_sda_pin, 1);
 #else
-    GPIO.OUT_SET = i2c_bus[bus].g_sda_mask;
+    GPIO.ENABLE_OUT_CLEAR = i2c_bus[bus].g_sda_mask;
 #endif
 }
 

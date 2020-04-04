@@ -29,8 +29,7 @@ const u16_t ser_port = 80;
 #define MPU9250_SCL_PIN 5
 #define MPU9250_SDA_PIN 4
 
-#define DEBUG_PRINTF(fmt, ...) printf("%s: " fmt "\n", "MAIN", ##__VA_ARGS__)
-
+#define SYS_PRINTF(fmt, ...) printf("%s: " fmt, "MAIN", ##__VA_ARGS__)
 /*********************** Function prototypes *********************************/
 void httpd_task(void *pvParameters);
 void sensor_task(void *pvParameters);
@@ -222,11 +221,11 @@ void httpd_task(void *pvParameters) {
 void sensor_task(void *pvParameters) {
   if (i2c_init(i2c1.bus, MPU9250_SCL_PIN, MPU9250_SDA_PIN, I2C_FREQ_400K) !=
       0) {
-    printf("Error has occurred while initializing MPU9250 I2C.\n");
+    SYS_PRINTF("Error has occurred while initializing MPU9250 I2C.\n");
   }
   mpu9250_dev = new MPU9250(i2c1, NULL);
   if (mpu9250_dev->begin() != 0) {
-    printf("Initialization of IMU has failed.\n");
+    SYS_PRINTF("Initialization of IMU has failed.\n");
   }
   printf("Finished INIT of MPU9250.\n");
   while (1) {
@@ -240,13 +239,13 @@ void sensor_task(void *pvParameters) {
     float magX = mpu9250_dev->getMagXuT();
     float magY = mpu9250_dev->getMagYuT();
     float magZ = mpu9250_dev->getMagZuT();
-    printf(
+    SYS_PRINTF(
         "Data obtained: Acc: {%f, %f, %f}, Gyro: {%f, %f, %f}, Mag: {%f, %f, "
         "%f}\n",
         accelX, accelY, accelZ, gyroX, gyroY, gyroZ, magX, magY, magZ);
     vTaskDelay(300 / portTICK_PERIOD_MS);
   }
-  printf("Deleting the task now.\n");
+  SYS_PRINTF("Deleting the sensor_task now.\n");
   free(mpu9250_dev);
   vTaskDelete(NULL);
 }
