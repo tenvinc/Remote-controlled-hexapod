@@ -24,3 +24,7 @@ src/.vscode/
 !src/.vscode/c_cpp_properties.json
 !src/.vscode/settings.json
 esp-open-rtos/*
+
+esp8266_glove/build/
+
+esp8266_glove/firmware/
