@@ -34,6 +34,7 @@ loader.load('./robot_hand.gltf', function(gltf) {
     console.log(gltf.scene);
     scene.add(model);
     animate();
+    console.log("Starting animation.");
 },
 // called while loading is progressing
 function ( xhr ) {
@@ -208,7 +209,7 @@ var connectBtn = new ToggleButton(toggle);
 var socket;
 
 function setupConnection(context) {
-    socket = new WebSocket("ws://localhost:8080");
+    socket = new WebSocket("ws://localhost:8081");
 
     socket.onopen = function (e) {
         alert("[open] Connection established");
@@ -219,7 +220,6 @@ function setupConnection(context) {
     socket.onmessage = function (event) {
         try {
             let json = JSON.parse(event.data);
-            console.log(json);
             if (json.containReading) {
                 // reading in degrees, convert to radians
                 nextRoll = json.roll * 2 * Math.PI / 360;
@@ -527,7 +527,6 @@ function animate() {
     model.rotation.z = -nextRoll;
     updateHud(model.rotation);
     renderer.render(scene, camera);
-
     // Update real time graph
     redrawGraph(rollReadings, rollPlot);
     redrawGraph(pitchReadings, pitchPlot);
