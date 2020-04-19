@@ -58,17 +58,19 @@ typedef struct servo_struct {
   uint8_t angle;         // angle commanded
   uint16_t pulse_width;  // corresponding pulse width commmanded
   uint8_t isActive;
+  uint16_t min_pw;       // min pulse width
+  uint16_t max_pw;       // max pulse width
+  uint8_t max_angle_range;
 } servo_struct_t;
 
 class PCA9685_Servo_Driver {
  public:
   PCA9685_Servo_Driver();
-  PCA9685_Servo_Driver(uint8_t sdaPin, uint8_t sclPin, uint16_t minPulseWidth,
-                       uint16_t maxPulseWidth);
-  pca9685_err_t setPWMFreq(uint16_t freq);
+  PCA9685_Servo_Driver(uint8_t sdaPin, uint8_t sclPin);
   uint8_t getServoCount();
   pca9685_err_t begin();  // Start communicating with board
   pca9685_err_t attach(uint8_t pin);
+  pca9685_err_t attach(uint8_t pin, uint16_t min_pw, uint16_t max_pw, uint8_t angle_range);
   pca9685_err_t detach(uint8_t pin);
   pca9685_err_t writeAngle(uint8_t pin,
                            uint8_t angle);  // Command servo at pin to go a
@@ -88,8 +90,6 @@ class PCA9685_Servo_Driver {
   uint8_t tail;              // end of servo list
   uint8_t free[MAX_SERVOS];  // indicates if pin is free
   uint8_t _numServos;
-  uint16_t _minPulseWidth;
-  uint16_t _maxPulseWidth;
   uint32_t _oscilFreq;  // internal freq used to calibrate pwm
   uint8_t _sdaPin;
   uint8_t _sclPin;
