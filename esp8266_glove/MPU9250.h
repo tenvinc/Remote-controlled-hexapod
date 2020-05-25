@@ -13,7 +13,8 @@ extern "C" {
 }
 #endif
 
-#define USE_MPU9250_MASTER_I2C 0
+// Determines whether to use MPU9250 as master for comms with external chips
+#define USE_MPU9250_MASTER_I2C 1  // MASTER_I2C needed for FIFO implementation
 
 #define G 9.807f
 
@@ -37,6 +38,13 @@ extern "C" {
 #define INT_RAW_RDY_EN 0x01
 #define INT_DISABLE 0x00
 
+#define MPU9250_FIFO_TEMP_EN_MSK 0x80
+#define MPU9250_FIFO_GYRO_MSK 0x70
+#define MPU9250_FIFO_ACCEL 0x08
+#define MPU9250_FIFO_SLV2 0x04
+#define MPU9250_FIFO_SLV1 0x02
+#define MPU9250_FIFO_SLV0 0x01  // default to be used for AK8963
+
 typedef enum {
   ACCEL_RANGE_2G,
   ACCEL_RANGE_4G,
@@ -52,14 +60,28 @@ typedef enum {
 } GyroRange;
 
 typedef enum {
-  DLPF_BANDWIDTH_184HZ,
-  DLPF_BANDWIDTH_92HZ,
-  DLPF_BANDWIDTH_41HZ,
-  DLPF_BANDWIDTH_20HZ,
-  DLPF_BANDWIDTH_10HZ,
-  DLPF_BANDWIDTH_5HZ,
-  DLPF_BANDWIDTH_OFF  // this enum does not map to anything in the register map
-} DlpfBandwidth;
+  GYRO_DLPF_BW_250HZ = 0,        // Delay: 0.97ms, Fs: 8kHz.<BW: 4000Hz, delay: 0.04ms> for temperature  
+  GYRO_DLPF_BW_184HZ = 1,        // Delay: 2.9ms, Fs: 1kHz.<BW: 188Hz, delay: 1.9ms> for temperature  
+  GYRO_DLPF_BW_92HZ = 2,         // Delay: 3.9ms, Fs: 1kHz.<BW: 98Hz, delay: 2.8ms> for temperature  
+  GYRO_DLPF_BW_41HZ = 3,         // Delay: 5.9ms, Fs: 1kHz.<BW: 42Hz, delay: 4.8ms> for temperature  
+  GYRO_DLPF_BW_20HZ = 4,         // Delay: 9.9ms, Fs: 1kHz.<BW: 20Hz, delay: 8.3ms> for temperature  
+  GYRO_DLPF_BW_10HZ = 5,         // Delay: 17.85ms, Fs: 1kHz.<BW: 10Hz, delay: 13.4ms> for temperature  
+  GYRO_DLPF_BW_5HZ = 6,          // Delay: 33.84ms, Fs: 1kHz.<BW: 5Hz, delay: 18.6ms> for temperature  
+  GYRO_DLPF_BW_3600HZ_FS8 = 7,   // Delay: 0.17ms, Fs: 8kHz.<BW: 4000Hz, delay: 0.04ms> for temperature  
+  GYRO_DLPF_BW_8800HZ,           // Delay: 0.064ms, Fs: 32kHz. <BW: 4000Hz, delay: 0.04ms> for temperature  
+  GYRO_DLPF_BW_3600HZ_FS32       // Delay: 0.11ms, Fs: 32kHz.<BW: 4000Hz, delay: 0.04ms> for temperature  
+} DlpfBandwidthGyro;
+
+typedef enum {
+  ACCEL_DLPF_BW_460HZ = 0,      // Delay: 1.94ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_184HZ,          // Delay: 5.80ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_92HZ,           // Delay: 7.80ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_41HZ,           // Delay: 11.80ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_20HZ,           // Delay: 19.80ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_10HZ,           // Delay: 35.70ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_5HZ,            // Delay: 66.96ms, Noise: 250ug/rtHz, Rate: 1kHz
+  ACCEL_DLPF_BW_1130HZ          // Delay: 0.75ms, Noise: 250ug/rtHz, Rate: 4kHz
+} DlpfBandwidthAccel;
 
 typedef enum {
   LP_ACCEL_ODR_0_24HZ = 0,  // 0_24 represents 0.24
@@ -109,7 +131,8 @@ typedef struct MPU9250Config {
   uint8_t accelRange;
   uint8_t gyroRange;
   uint8_t lpAccODR;
-  uint8_t dlpfBandwidth;
+  uint8_t gyroDlpfBandwidth;
+  uint8_t accelDlpfBandwidth;
   uint8_t accelFIFOEnabled;
   uint8_t gyroFIFOEnabled;
   uint8_t fifoBufOverflow;
@@ -189,7 +212,8 @@ class MPU9250 : public MPU9250Core {
   uint8_t whoAmIAK8963(void);
   mpu9250_err_t setAccelRange(uint8_t range);
   mpu9250_err_t setGyroRange(uint8_t range);
-  mpu9250_err_t setDlpfBW(uint8_t bandwidth);
+  mpu9250_err_t setGyroDlpfBW(uint8_t gyroBW);
+  mpu9250_err_t setAccelDlpfBW(uint8_t accelBW);
   mpu9250_err_t enableDRInterrupt();   // enable Data Ready interrupt
   mpu9250_err_t disableDRInterrupt();  // disable Data Ready Interrupt
   mpu9250_err_t readSensors();
@@ -215,8 +239,8 @@ class MPU9250 : public MPU9250Core {
   int16_t getYMagRaw();
   int16_t getZMagRaw();
 
- private:
   MPU9250Config_t config;
+ private:
   float _accelScale;
   float _gyroScale;
   MagScale_t _magScale;

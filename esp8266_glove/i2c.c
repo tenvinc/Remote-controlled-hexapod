@@ -136,7 +136,7 @@ int i2c_init_hz(uint8_t bus, uint8_t scl_pin, uint8_t sda_pin, uint32_t freq)
     gpio_enable(sda_pin, GPIO_OUT_OPEN_DRAIN);
 
     // I2C bus idle state.
-    GPIO.ENABLE_OUT_SET = i2c_bus[bus].g_scl_mask | i2c_bus[bus].g_sda_mask;
+    GPIO.ENABLE_OUT_CLEAR = i2c_bus[bus].g_scl_mask | i2c_bus[bus].g_sda_mask;
 
     // Inform user if the desired frequency is not supported.
     if (i2c_set_frequency_hz(bus, freq) != 0) {

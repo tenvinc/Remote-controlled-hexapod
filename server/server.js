@@ -1,76 +1,44 @@
 const express = require('express');
 const app = express();
 const path = require('path');
-const Serial = require('serialport');
-const port = new Serial('/dev/ttyACM0', {
-    baudRate: 115200,
-    autoOpen: false,
-    dataBits: 8,
-    parity: 'none',
-    stopBits: 1
-});
-const Readline = require('@serialport/parser-readline');
-const parser = port.pipe(new Readline({ delimiter: '\n' }))
+// const Serial = require('serialport');
+// const port = new Serial('/dev/ttyACM0', {
+//     baudRate: 115200,
+//     autoOpen: false,
+//     dataBits: 8,
+//     parity: 'none',
+//     stopBits: 1
+// });
+// const Readline = require('@serialport/parser-readline');
+// const parser = port.pipe(new Readline({ delimiter: '\n' }))
 const WebSocket = require('ws');
 
-const wsServer = new WebSocket.Server({ port: 8080 })
+const wsDevServer = new WebSocket.Server({ port: 8080 })
+const wsClientServer = new WebSocket.Server( {port: 8081 })
 
-var clients = [];
+var devices = [];  // represents the gloves
+var clients = [];  // represents client connecting through browser
 
-wsServer.on('connection', ws => {
+var flag = false;
+
+wsDevServer.on('connection', ws => {
+    ws.on('message', (message) => {
+        if (!flag) {
+            console.log("First connection from device!");
+            flag = true;
+        }
+        clients.forEach(client => {
+            client.send(message);  // pass through
+        });
+    });
+});
+
+wsClientServer.on('connection', ws => {
     var index = clients.push(ws) - 1;
     ws.on('message', (message) => {
-        if (message.type == 'utf-8') {
-            console.log(message);
-        }
+        console.log(message);
     });
-    ws.send("thank you for the connection!");
-});
-
-
-var json2 = {
-    'containReading': false,
-    'message': "This represents a debug message."
-}
-
-var periodicMessage = setInterval(() => {
-    clients.forEach(client => {
-        client.send(JSON.stringify(json2));
-    });
-}, 20);
-
-port.open((err) => {
-    if (err) console.log("Error has occured. " + err.message);
-});
-
-port.on('open', () => {
-    console.log("Connection with Arduino established.")
-});
-
-parser.on('data', (data) => {
-    const re = /Data: ([0-9., -]+)/;
-    
-    let matcher = data.match(re);
-    if (matcher === null) return;
-    
-    let filt = matcher[1];
-    var params = filt.split(",");
-    params = params.map(item => { return parseFloat(item); });
-    // console.log(params);
-    
-    let json = {
-        'containReading': true,
-        'time': params[0],
-        'roll': params[1],
-        'pitch': params[2],
-        'yaw': 0
-    }
-
-    clients.forEach(client => {
-        if (client.readyState == WebSocket.OPEN) {
-            client.send(JSON.stringify(json));
-        }
-    });
+    console.log("Client signed in.");
 });
 
 app.use(express.static(__dirname + '/public'));
