@@ -45,7 +45,23 @@ app.use(express.static(__dirname + '/public'));
 
 app.get('/', (req, res) => {
     if (req.method == "GET") {
-        res.sendFile(path.join(__dirname + '/public/app.html'), (err) => {
+        res.sendFile(path.join(__dirname + '/public/glove_dashboard.html'), (err) => {
+            if (err) console.error("Error has occured!" + err);
+        });
+    }
+});
+
+app.get('/gdashboard', (req, res) => {
+    if (req.method == "GET") {
+        res.sendFile(path.join(__dirname + '/public/glove_dashboard.html'), (err) => {
+            if (err) console.error("Error has occured!" + err);
+        });
+    }
+});
+
+app.get('/manualcontrol', (req, res) => {
+    if (req.method == "GET") {
+        res.sendFile(path.join(__dirname + '/public/hexy_manualctrl.html'), (err) => {
             if (err) console.error("Error has occured!" + err);
         });
     }

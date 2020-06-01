@@ -106,8 +106,16 @@ function updateHud(rotation) {
 }
 
 function resizeViz() {
-    const displayWidth = renderer.domElement.clientHeight;
-    const displayHeight = renderer.domElement.clientWidth;
+    // remove influence of canvas on flex item size
+    renderer.setSize(0, 0, false);
+
+    let parent = renderer.domElement.parentElement;
+    let boundrect = parent.getBoundingClientRect();
+    console.log(boundrect);
+    let displayWidth = boundrect.width - parseFloat(window.getComputedStyle(parent, null).getPropertyValue('padding-left'))
+                    - parseFloat(window.getComputedStyle(parent, null).getPropertyValue('padding-right'));
+    let displayHeight = boundrect.height - parseFloat(window.getComputedStyle(parent, null).getPropertyValue('padding-top'))
+                - parseFloat(window.getComputedStyle(parent, null).getPropertyValue('padding-bottom'));
     let canvas = renderer.domElement;
 
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -115,6 +123,7 @@ function resizeViz() {
 
     if (canvas.height !== displayHeight || canvas.width !== displayWidth) {
         renderer.setSize(displayWidth, displayHeight, false);
+        console.log(displayHeight + " " + displayWidth);
         console.log("3D Canvas resized to " + canvas.height + ", " + canvas.width);
     }
 }
@@ -455,22 +464,56 @@ Plot.prototype.updateCanvasSize = function () {
 var terminal = document.querySelector("#debug-terminal");
 connectBtn.activateListener(setupConnection, teardownConnection);
 
-function initCanvas(canvas) {
-    // Do twice to cater to the flex grow factor
-    let width = canvas.parentElement.clientWidth;
-    let height = canvas.parentElement.clientHeight;
-    canvas.setAttribute('width', width);
-    canvas.setAttribute('height', height);
-    width = canvas.parentElement.clientWidth;
-    height = canvas.parentElement.clientHeight;
-    canvas.setAttribute('width', width);
-    canvas.setAttribute('height', height);
-    return canvas;
+function initCanvas(canvas1, canvas2, canvas3) {
+    // Remove effect of canvas on scaling
+    canvas1.setAttribute('width', 0);
+    canvas1.setAttribute('height', 0);
+    canvas2.setAttribute('width', 0);
+    canvas2.setAttribute('height', 0);
+    canvas3.setAttribute('width', 0);
+    canvas3.setAttribute('height', 0);
+
+    let parent1 = canvas1.parentElement;
+    let parent2 = canvas2.parentElement;
+    let parent3 = canvas3.parentElement;
+
+    let boundrect1 = parent1.getBoundingClientRect();
+    let boundrect2 = parent2.getBoundingClientRect();
+    let boundrect3 = parent3.getBoundingClientRect();
+
+    let width1 = boundrect1.width - parseFloat(window.getComputedStyle(parent1, null).getPropertyValue('padding-left'))
+                - parseFloat(window.getComputedStyle(parent1, null).getPropertyValue('padding-right'));
+    let height1 = boundrect1.height - parseFloat(window.getComputedStyle(parent1, null).getPropertyValue('padding-top'))
+                - parseFloat(window.getComputedStyle(parent1, null).getPropertyValue('padding-bottom'));
+
+    let width2 = boundrect2.width - parseFloat(window.getComputedStyle(parent2, null).getPropertyValue('padding-left'))
+                - parseFloat(window.getComputedStyle(parent2, null).getPropertyValue('padding-right'));
+    let height2 = boundrect2.height - parseFloat(window.getComputedStyle(parent2, null).getPropertyValue('padding-top'))
+                - parseFloat(window.getComputedStyle(parent2, null).getPropertyValue('padding-bottom'));
+
+    let width3 = boundrect3.width - parseFloat(window.getComputedStyle(parent3, null).getPropertyValue('padding-left'))
+                - parseFloat(window.getComputedStyle(parent3, null).getPropertyValue('padding-right'));
+    let height3 = boundrect3.height - parseFloat(window.getComputedStyle(parent3, null).getPropertyValue('padding-top'))
+                - parseFloat(window.getComputedStyle(parent3, null).getPropertyValue('padding-bottom'));
+
+    // Apply changes all at once
+
+    canvas1.setAttribute('width', Math.floor(width1 - 5));
+    canvas1.setAttribute('height', Math.floor(height1 - 5));
+
+    canvas2.setAttribute('width', Math.floor(width2 - 5));
+    canvas2.setAttribute('height', Math.floor(height2 - 5));
+    
+    canvas3.setAttribute('width', Math.floor(width3 - 5));
+    canvas3.setAttribute('height', Math.floor(height3 - 5));
+
+    return;
 }
 
-var graphRoll = initCanvas(document.querySelector("#roll-graph"));
-var graphPitch = initCanvas(document.querySelector("#pitch-graph"));
-var graphYaw = initCanvas(document.querySelector("#yaw-graph"));
+var graphRoll = document.querySelector("#roll-graph");
+var graphPitch = document.querySelector("#pitch-graph");
+var graphYaw = document.querySelector("#yaw-graph");
+initCanvas(graphRoll, graphPitch, graphYaw);
 var config = new GraphOptions({'minX': 0, 'maxX': 5, 'minY': -3.14, 'maxY': 3.14, 'yTick': 0.5, 'crossSize': 0.5});
 var rollPlot = new Plot({}, config, graphRoll);
 var pitchPlot = new Plot({}, config, graphPitch);
@@ -481,12 +524,10 @@ var pitchReadings = [];
 var yawReadings = [];
 
 function resizeGraphs() {
-    plots = [rollPlot, pitchPlot, yawPlot];
-    for (let i = 0; i < plots.length; i++) {
-        let canvas = plots[i].ctx.canvas;
-        initCanvas(canvas);
-        plots[i].updateCanvasSize();
-    }
+    initCanvas(rollPlot.ctx.canvas, pitchPlot.ctx.canvas, yawPlot.ctx.canvas);
+    rollPlot.updateCanvasSize();
+    pitchPlot.updateCanvasSize();
+    yawPlot.updateCanvasSize();
 }
 
 var x = rollPlot.options.minX;

@@ -1,0 +1,259 @@
+#wrapper {
+  display: flex;
+  margin: 0px;
+  padding: 0px;
+  height: 100vh;
+  background: rgb(34,34,34) !important;
+}
+
+#content-wrapper {
+  width: 100%;
+  background: transparent;
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bg-dark {
+  background-color: #343a40!important;
+}
+
+#viz-body {
+  max-height: 90% !important;
+}
+
+.bg-lighter-dark {
+  background-color: rgb(34,34,34) !important;
+}
+
+#sidebar {
+  height: 100%;
+  width: 14rem;
+  padding: 30px 5px 5px 5px;
+  border: solid;
+  background: rgb(42,50,58);
+  border-color: rgb(23,68,112);
+}
+
+#sidebar-layout {
+  margin: 5px;
+  padding: 0px;
+}
+
+#site-options {
+  margin: 25px 0px 0px 0px;
+}
+
+.graph {
+  margin: 10px 5px 10px 5px;
+}
+
+#content {
+  flex-grow: 1;
+  padding: 0px 20px 0px 0px;
+  margin: 10px 10px 10px 10px;
+}
+
+#page-header {
+  font-weight: 500;
+  font-family: cursive;
+  color: white;
+}
+
+.console {
+  margin: 10px 5px 10px 5px;
+  flex-grow: 1;
+  min-height: 7rem;
+}
+
+.modelviz {
+  margin: 10px 5px 10px 5px;
+  flex-grow: 2;
+}
+
+#site-brand {
+  font-size: xx-large;
+  text-align: justify;
+  margin: 5px;
+  color: rgb(222,174,0) !important;
+}
+
+.sidebar-item {
+  font-size: x-large;
+  font-variant: small-caps;
+  font-style: oblique;
+  font-family: inherit;
+}
+
+#controls-wrapper {
+  text-align: center;
+}
+
+.controls-grid {
+  width: 500px;
+  height: 500px;
+  background-color: transparent;
+  margin: auto;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  grid-template-columns: auto auto auto;
+  grid-gap: 10px;
+}
+
+#d-pad-turn-right {
+  background: url(../../assets/img/dpad-turnright.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 1 / 3 / span 1 / span 1;
+}
+
+#d-pad-up {
+  background: url(../../assets/img/dpad-up.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 1 / 2 / span 1 / span 1;
+}
+
+#d-pad-turn-left {
+  background: url(../../assets/img/dpad-turnleft.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 1 / 1 / span 1 / span 1;
+}
+
+#d-pad-left {
+  background: url(../../assets/img/dpad-left.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 2 / 1 / span 1 / span 1;
+}
+
+#d-pad-center {
+  background: url(../../assets/img/dpad-center.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 2 / 2 / span 1 / span 1;
+}
+
+#d-pad-down {
+  background: url(../../assets/img/dpad-down.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 3 / 2 / span 1 / span 1;
+}
+
+#d-pad-right {
+  background: black;
+  background: url(../../assets/img/dpad-right.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  grid-area: 2 / 3 / span 1/ span 1;
+}
+
+.viz-canvas {
+  height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+}
+
+#viz-body {
+  max-height: 90% !important;
+}
+
+.viz-hud {
+  position: absolute;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  bottom: 2%;
+}
+
+.viz-hud .label {
+  padding: 1rem;
+  color: #ffffff;
+  font-weight: 100;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+.viz-hud .element {
+  padding: 1rem;
+  min-width: 10%;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.debug-terminal {
+  background: #262626;
+  overflow-y: scroll;
+  margin-bottom: 0.5rem;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.debug-terminal .message {
+  flex: 0 0 100%;
+  max-width: 100%;
+  color: #ffffff;
+  font-family: "Poppins", sans-serif;
+}
+
+.viz-canvas {
+  height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+}
+
+#viz-body {
+  max-height: 90% !important;
+}
+
+.viz-hud {
+  position: absolute;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  bottom: 2%;
+}
+
+.viz-hud .label {
+  padding: 1rem;
+  color: #ffffff;
+  font-weight: 100;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+.viz-hud .element {
+  padding: 1rem;
+  min-width: 10%;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.debug-terminal {
+  background: #262626;
+  overflow-y: scroll;
+  margin-bottom: 0.5rem;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.debug-terminal .message {
+  flex: 0 0 100%;
+  max-width: 100%;
+  color: #ffffff;
+  font-family: "Poppins", sans-serif;
+}
+

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,700&amp;display=swap">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/bootstrap4-toggle.css">
+</head>
+
+<body id="wrapper" class="container-fluid">
+    <nav class="navbar navbar-light navbar-expand-md" id="sidebar">
+        <div class="container-fluid d-flex flex-column justify-content-start align-self-start" id="sidebar-layout"><a class="navbar-brand text-capitalize text-primary d-xl-flex" id="site-brand" href="#">Hexy Controls</a>
+            <ul class="nav navbar-nav d-flex flex-column align-self-start" id="site-options">
+                <li class="nav-item" role="presentation"><a class="nav-link active text-light sidebar-item" href="gdashboard">Glove Dashboard</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link text-light sidebar-item" href="manualcontrol">Manual Control</a></li>
+                <li class="nav-item" role="presentation"></li>
+            </ul>
+        </div>
+    </nav>
+    <div id="content-wrapper">
+        <nav class="navbar navbar-light navbar-expand-md flex-grow-0">
+            <div class="container-fluid d-flex justify-content-center"><a class="navbar-brand" id="page-header" href="#" style="font-size: 40px;">Hexy Glove Dashboard</a><input class="toggle" type="checkbox" data-toggle="toggle" data-onstyle="success" data-offstyle="secondary"></div>
+        </nav>
+        <div id="content" class="container-fluid row">
+            <div class="col-8 d-flex flex-column justify-content-between align-items-stretch">
+                <div class="card modelviz">
+                    <div class="card-header">
+                        <h4>3D Visualization</h4>
+                    </div>
+                    <div class="card-body" id="viz-body"></div>
+                </div>
+                <div class="card console">
+                    <div class="card-header">
+                        <h4>Debug Console</h4>
+                    </div>
+                    <div class="card-body" style="height: 500;min-height: 500;">
+                        <div id="debug-terminal"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4 d-flex flex-column justify-content-between">
+                <div class="card flex-grow-1 graph">
+                    <div class="card-header">
+                        <h4>Roll (rad/s)</h4>
+                    </div>
+                    <div class="card-body graph-body"><canvas id="roll-graph" width="0" height="0"></canvas></div>
+                </div>
+                <div class="card flex-grow-1 graph">
+                    <div class="card-header">
+                        <h4>Pitch (rad/s)</h4>
+                    </div>
+                    <div class="card-body graph-body"><canvas id="pitch-graph" width="0" height="0"></canvas></div>
+                </div>
+                <div class="card flex-grow-1 graph">
+                    <div class="card-header">
+                        <h4>Yaw (rad/s)</h4>
+                    </div>
+                    <div class="card-body graph-body"><canvas id="yaw-graph" width="0" height="0"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+    <script src="assets/js/GLTFLoader.js"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+
+</html>
