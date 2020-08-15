@@ -1,7 +1,6 @@
 #include "websocket.h"
 
 extern "C" {
-#include <lwip/tcp.h>
 #include <stdio.h>
 #include <string.h>
 }
@@ -29,10 +28,24 @@ enum ws_opcode_t {
 };
 
 /*********************************************************************
+ * Function prototype
+ *********************************************************************/
+err_t ws_tcp_connected_cb(void *arg, struct tcp_pcb *pcb, err_t err);
+err_t ws_recv_cb(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err);
+err_t ws_poll(void *arg, struct tcp_pcb *pcb);
+void ws_ping(struct tcp_pcb *pcb);
+void ws_write(struct tcp_pcb *pcb, u8_t *data, u16_t len, u8_t mode);
+WebSocket *findWebsocket(struct tcp_pcb *pcb);
+uint8_t findInConnecting(struct tcp_pcb *pcb);
+uint8_t findInConnected(struct tcp_pcb *pcb);
+void removeWebsocket(WebSocket *websocket);
+void removeFromConnecting(int toremove);
+void removeFromConnected(int toremove);
+/*********************************************************************
  * Websocket Class specific functions
  *********************************************************************/
 
-WebSocket::WebSocket(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
+err_t WebSocket::open(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
                      uint16_t port) {
   IP4_ADDR(&ser_addr, a, b, c, d);
   LOCK_TCPIP_CORE();  // Mutex to make tcp threadsafe
@@ -43,12 +56,14 @@ WebSocket::WebSocket(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
     state = State_t::DISCONNECTED;
     // TODO: to deallocate the pcb
     DEBUG_PRINTF("TCP connection failed.");
+    return ERR_CLSD;
   }
   retries = 0;
   state = State_t::CONNECTING;
   idx = connectingSize;
-  this->port = port;
+  ser_port = port;
   connecting[connectingSize++] = this;
+  return ERR_OK;
 }
 
 err_t WebSocket::client_parse(unsigned char *data, u16_t len) {
@@ -57,18 +72,19 @@ err_t WebSocket::client_parse(unsigned char *data, u16_t len) {
     // check for mask bit
     bool is_masked = (data[1] & 0x80);
     if (is_masked) {
-      printf("This is invalid for a client. Server should not mask.\n");
+      DEBUG_PRINTF("This is invalid for a client. Server should not mask.\n");
     }
     len = (data[1] & 0x7F);
     if (len > 125) {
-      printf("This should not happen given our assumption of max 125 bytes.\n");
+      DEBUG_PRINTF("This should not happen given our assumption of max 125 bytes.\n");
     }
     switch (opcode) {
       case 0x01:
       case 0x02: {
         unsigned char *payload = &data[2];
-        printf("Received: %s\n", payload);
+        DEBUG_PRINTF("Received: %s\n", payload);
         memcpy(data, payload, strlen((char *)payload)+1);
+        on_recv();
         break;
       }
       case 0x08:
@@ -94,6 +110,7 @@ err_t WebSocket::close() {
   removeWebsocket(this);
   state = State_t::DISCONNECTED;
   DEBUG_PRINTF("Closed websocket connection.");
+  on_close();
   // // start the reconnection again
   // xTaskCreate(&httpd_task, "HTTP Daemon", 1024, NULL, 2, NULL);
   return err;
@@ -115,11 +132,26 @@ err_t WebSocket::read(char *toread) {
   return ERR_OK;
 }
 
+void WebSocket::on_connected() {
+  char ipstring[45];
+  ipaddr_ntoa_r(&ser_addr, ipstring, sizeof(ipstring));
+  DEBUG_PRINTF("Connected to %s at port %d", ipstring, ser_port);
+  if (on_connected_cb) (*on_connected_cb)();
+}
+
+void WebSocket::on_recv() {
+  if (on_recv_cb) (*on_recv_cb)(data);
+}
+
+void WebSocket::on_close() {
+  if (on_close_cb) (*on_close_cb)();
+}
+
 /*********************************************************************
  * File scope functions (Comprises of callbacks for LWIP/TCP)
  *********************************************************************/
 
-static err_t ws_tcp_connected_cb(void *arg, struct tcp_pcb *pcb, err_t err) {
+err_t ws_tcp_connected_cb(void *arg, struct tcp_pcb *pcb, err_t err) {
   LOCK_TCPIP_CORE();
   tcp_recv(pcb, ws_recv_cb);
   UNLOCK_TCPIP_CORE();
@@ -133,19 +165,19 @@ static err_t ws_tcp_connected_cb(void *arg, struct tcp_pcb *pcb, err_t err) {
            "Sec-WebSocket-Version: 13\r\n"
            "Sec-WebSocket-Key: a0YBiKi7u7cdhbz8xu5FWQ==\r\n\r\n",
            pcb->remote_port);
-  err_t err = tcp_write(pcb, rsp, strlen(rsp), TCP_WRITE_FLAG_MORE);
+  err = tcp_write(pcb, rsp, strlen(rsp), TCP_WRITE_FLAG_MORE);
   tcp_poll(pcb, ws_poll, POLL_INTERVAL);
   return err;
 }
 
-static err_t ws_recv_cb(void *arg, struct tcp_pcb *pcb, struct pbuf *p,
+err_t ws_recv_cb(void *arg, struct tcp_pcb *pcb, struct pbuf *p,
                         err_t err) {
   WebSocket *websocket;
 
   if ((websocket = findWebsocket(pcb)) == nullptr) return ERR_CLSD;
 
   if (p == NULL) {
-    printf("Connection has been closed.\n");
+    DEBUG_PRINTF("Connection has been closed.\n");
     websocket->close();
     return ERR_CLSD;
   }
@@ -155,17 +187,21 @@ static err_t ws_recv_cb(void *arg, struct tcp_pcb *pcb, struct pbuf *p,
   UNLOCK_TCPIP_CORE();
   unsigned char *data = (unsigned char *)(p->payload);
   u16_t datalen = p->len;
-  if (strnstr((char *)data, WS_HEADER, datalen) > 0 &&
-      strnstr((char *)data, WS_SERVER_SWITCH, datalen) > 0) {
+  if (strstr((char *)data, WS_HEADER) > 0 &&
+      strstr((char *)data, WS_SERVER_SWITCH) > 0) {
+  // if (strnstr((char *)data, WS_HEADER, datalen) > 0 &&
+  //     strnstr((char *)data, WS_SERVER_SWITCH, datalen) > 0) {
     removeFromConnecting(
         websocket->idx);  // Move websocket from tmp to the connected pile
     websocket->idx = connectedSize;
     connected_websockets[connectedSize++] = websocket;
     websocket->state = WebSocket::State_t::CONNECTED;
-    printf("Server has accepted the switch to websockets.\n");
+    DEBUG_PRINTF("Server has accepted the switch to websockets.\n");
+    websocket->on_connected();
   }
 
   if (websocket->state == WebSocket::State_t::CONNECTED) {
+    // TODO: add external user callback (on_recv)
     websocket->client_parse(data, datalen);
   }
 
@@ -181,7 +217,7 @@ err_t ws_poll(void *arg, struct tcp_pcb *pcb) {
   websocket->retries++;
   if (websocket->retries > MAX_RETRIES) {
     err = websocket->close();
-    printf("No response after 100 polls. Closed.\n");
+    DEBUG_PRINTF("No response after 100 polls. Closed.\n");
     return err;
   }
   ws_ping(pcb);
