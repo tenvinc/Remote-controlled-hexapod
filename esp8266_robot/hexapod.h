@@ -33,6 +33,7 @@ typedef struct servo_intrinsics {
 class Hexapod {
  public:
   void init();
+  void keep();
   void stand();
   void turn_left();
   void turn_right();

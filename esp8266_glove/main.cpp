@@ -14,6 +14,7 @@ extern "C" {
 }
 #include "Kalman.h"
 #include "MPU9250.h"
+#include "websocket.h"
 
 #define LED_PIN 2
 
@@ -37,22 +38,15 @@ const u16_t ser_port = 80;
 /*********************** Function prototypes *********************************/
 void httpd_task(void *pvParameters);
 void sensor_task(void *pvParameters);
-err_t ws_client_parse(unsigned char *data, u16_t len);
-err_t ws_close();
-err_t ws_poll(void *arg, struct tcp_pcb *pcb);
-void ws_write(struct tcp_pcb *pcb, u8_t *data, u16_t len, u8_t mode);
-void ws_ping(struct tcp_pcb *pcb);
 /*****************************************************************************/
-unsigned int retries = 0;
-struct tcp_pcb *ws_pcb = NULL;
-bool ws_connected = false;
-ip_addr_t ser_addr;
+
+WebSocket websocket;
 
 MPU9250 *mpu9250_dev;
 i2c_dev_t i2c1{0, MPU9250_I2C_ADDR};
 
-static const char WS_HEADER[] = "Upgrade: websocket\r\n";
-static const char WS_SERVER_SWITCH[] = "Switching Protocols";
+// static const char WS_HEADER[] = "Upgrade: websocket\r\n";
+// static const char WS_SERVER_SWITCH[] = "Switching Protocols";
 
 typedef struct xyz_reading {
   float x;
@@ -71,136 +65,6 @@ SemaphoreHandle_t mutex_sen_reading;
 xyz_reading_t orientation;
 uint32_t timenow;
 
-enum ws_opcode_t {
-  OPCODE_TEXT = 0x01,
-  OPCODE_BINARY = 0x02,
-  OPCODE_CLOSE = 0x08,
-  OPCODE_PING = 0x09,
-  OPCODE_PONG = 0x0A
-};
-
-static err_t ws_recv_cb(void *arg, struct tcp_pcb *pcb, struct pbuf *p,
-                        err_t err) {
-  if (p == NULL) {
-    printf("Connection has been closed.\n");
-    ws_close();
-    return ERR_CLSD;
-  }
-  LOCK_TCPIP_CORE();
-  tcp_recved(pcb, p->len);
-  UNLOCK_TCPIP_CORE();
-  unsigned char *data = (unsigned char *)(p->payload);
-  u16_t datalen = p->len;
-  if (strnstr((char *)data, WS_HEADER, datalen) > 0 &&
-      strnstr((char *)data, WS_SERVER_SWITCH, datalen) > 0) {
-    printf("Server has accepted the switch to websockets.\n");
-    ws_connected = true;
-  }
-  if (ws_connected) {
-    ws_client_parse(data, datalen);
-  }
-  pbuf_free(p);
-  return ERR_OK;
-}
-
-static err_t ws_tcp_connected_cb(void *arg, struct tcp_pcb *pcb, err_t err) {
-  LOCK_TCPIP_CORE();
-  tcp_recv(pcb, ws_recv_cb);
-  UNLOCK_TCPIP_CORE();
-  static char rsp[512];
-  snprintf(rsp, sizeof(rsp),
-           "GET / HTTP/1.1\r\n"
-           "Host: 192.168.1.92:%d\r\n"
-           "Connection: Upgrade\r\n"
-           "Upgrade: websocket\r\n"
-           "Sec-WebSocket-Version: 13\r\n"
-           "Sec-WebSocket-Key: a0YBiKi7u7cdhbz8xu5FWQ==\r\n\r\n",
-           ser_port);
-  err = tcp_write(pcb, rsp, strlen(rsp), TCP_WRITE_FLAG_MORE);
-  tcp_poll(pcb, ws_poll, POLL_INTERVAL);
-  xSemaphoreGive(semaphore_ws);
-  return err;
-}
-
-err_t ws_client_parse(unsigned char *data, u16_t len) {
-  if (data != NULL && len > 1) {
-    u8_t opcode = data[0] & 0x0F;
-    // check for mask bit
-    bool is_masked = (data[1] & 0x80);
-    if (is_masked) {
-      printf("This is invalid for a client. Server should not mask.\n");
-    }
-    len = (data[1] & 0x7F);
-    if (len > 125) {
-      printf("This should not happen given our assumption of max 125 bytes.\n");
-    }
-    switch (opcode) {
-      case 0x01:
-      case 0x02: {
-        unsigned char *payload = &data[2];
-        printf("Received: %s\n", payload);
-        break;
-      }
-      case 0x08:
-        return ERR_CLSD;
-        ws_close();
-        break;
-    }
-  }
-  return ERR_OK;
-}
-
-void ws_ping(struct tcp_pcb *pcb) {
-  char *ping = "ping";
-  ws_write(pcb, (unsigned char *)ping, strlen(ping), OPCODE_PING);
-}
-
-err_t ws_poll(void *arg, struct tcp_pcb *pcb) {
-  err_t err;
-  retries++;
-  if (retries > 100) {
-    printf("No response after 100 polls. Closing now.\n");
-    err = ws_close();
-    return err;
-  }
-  ws_ping(pcb);
-  return ERR_OK;
-}
-
-void ws_write(struct tcp_pcb *pcb, u8_t *data, u16_t len, u8_t mode) {
-  if (pcb == NULL) {
-    return;
-  }
-  if (len > 125) {
-    return;
-  }
-  unsigned char buf[len + 2];
-  buf[0] = 0x80 | mode;
-  buf[1] = len;
-  memcpy(&buf[2], data, len);
-  LOCK_TCPIP_CORE();
-  tcp_write(pcb, (void *)buf, sizeof(buf) / sizeof(buf[0]),
-            TCP_WRITE_FLAG_COPY);
-  UNLOCK_TCPIP_CORE();
-}
-
-err_t ws_close() {
-  err_t err = ERR_OK;
-  if (ws_pcb) {
-    tcp_recv(ws_pcb, NULL);
-    err = tcp_close(ws_pcb);
-  }
-  if (err != ERR_OK) {
-    return err;
-  }
-  ws_pcb = NULL;
-  ws_connected = false;
-  printf("Closed websocket connection.");
-  // start the reconnection again
-  xTaskCreate(&httpd_task, "HTTP Daemon", 1024, NULL, 2, NULL);
-  return err;
-}
-
 void ws_task(void *pvParameters) {
   while (1) {
     if (xSemaphoreTake(semaphore_ws, portMAX_DELAY) == pdTRUE) {
@@ -211,7 +75,10 @@ void ws_task(void *pvParameters) {
                 "{\"roll\": %5f, \"pitch\": %5f, \"yaw\": %5f, \"time\": %u, "
                 "\"containReading\": true}",
                 orientation.x, orientation.y, orientation.z, timenow++);
-        ws_write(ws_pcb, (uint8_t *)msg, strlen(msg), OPCODE_TEXT);
+        if (websocket.state == WebSocket::State_t::CONNECTED) {
+          websocket.write(msg, strlen(msg));
+        }
+        // ws_write(ws_pcb, (uint8_t *)msg, strlen(msg), OPCODE_TEXT);
         xSemaphoreGive(mutex_sen_reading);
       }
       xSemaphoreGive(semaphore_ws);
@@ -226,11 +93,12 @@ void httpd_task(void *pvParameters) {
     if (sdk_wifi_get_opmode() == STATION_MODE &&
         sdk_wifi_station_get_connect_status() == STATION_GOT_IP) {
       printf("IP obtained. Now trying to connect to a live server.\n");
-      IP4_ADDR(&ser_addr, 192, 168, 1, 104);
-      LOCK_TCPIP_CORE();  // Mutex to make tcp threadsafe
-      ws_pcb = tcp_new();
-      err = tcp_connect(ws_pcb, &ser_addr, ser_port, ws_tcp_connected_cb);
-      UNLOCK_TCPIP_CORE();
+      err = websocket.open(192, 168, 1, 104, ser_port);
+      // IP4_ADDR(&ser_addr, 192, 168, 1, 104);
+      // LOCK_TCPIP_CORE();  // Mutex to make tcp threadsafe
+      // ws_pcb = tcp_new();
+      // err = tcp_connect(ws_pcb, &ser_addr, ser_port, ws_tcp_connected_cb);
+      // UNLOCK_TCPIP_CORE();
       if (err != ERR_OK) {
         printf("Connection could not be established. Please try again.\n");
         continue;
@@ -339,5 +207,5 @@ extern "C" void user_init(void) {
 
   xTaskCreate(&httpd_task, "HTTP Daemon", 1024, NULL, 2, NULL);
   xTaskCreate(&ws_task, "Websocket Daemon", 1024, NULL, 3, NULL);
-  xTaskCreate(&sensor_task, "Sensor task", 1024, NULL, 2, NULL);
+  // xTaskCreate(&sensor_task, "Sensor task", 1024, NULL, 2, NULL);
 }

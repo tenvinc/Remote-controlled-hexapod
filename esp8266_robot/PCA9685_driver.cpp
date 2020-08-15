@@ -109,12 +109,12 @@ pca9685_err_t PCA9685_Servo_Driver::attach(uint8_t pin, uint16_t min_pw,
                                            uint16_t max_pw,
                                            uint8_t angle_range) {
   if (pin >= MAX_SERVOS) {
-    LOG_PRINTF("Pin %d invalid!", pin);
+    LOG_PRINTF("Pin %d invalid!\n", pin);
     return PCA9685_SERVO_INVALID_PIN;
   }
 
   if (!free[pin]) {
-    LOG_PRINTF("Servo at pin %d already attached!", pin);
+    LOG_PRINTF("Servo at pin %d already attached!\n", pin);
     return PCA9685_SERVO_ALR_ATTACHED;
   }
 
@@ -161,38 +161,38 @@ pca9685_err_t PCA9685_Servo_Driver::detach(uint8_t pin) {
 pca9685_err_t PCA9685_Servo_Driver::begin() {
   uint8_t towrite, reg, readvalue;
   if (i2c_init(DEFAULT_BUS, _sclPin, _sdaPin, I2C_FREQ_400K) != 0) {
-    LOG_PRINTF("Error has occurred while initializing PCA9685 I2C.");
+    LOG_PRINTF("Error has occurred while initializing PCA9685 I2C.\n");
     return PCA9685_CMD_ERR;
   }
 
   // do a software reset to init readRegisters (Special SWRST call)
   reg = 0x06;
   if (i2c_slave_write(DEFAULT_BUS, 0x00, &reg, data, 0) != 0) {
-    LOG_PRINTF("SWRST failed.");
+    LOG_PRINTF("SWRST failed.\n");
     return PCA9685_CMD_ERR;
   }
 
   // Sleep needed to change PWM freq
   towrite = MODE1_LOW_POW;
   if (writeRegister(PCA9685_MODE1, &towrite) != 0) {
-    LOG_PRINTF("Write to MODE1 failed.");
+    LOG_PRINTF("Write to MODE1 failed.\n");
     return PCA9685_CMD_ERR;
   }
   // default set to 50 hz for servo
   towrite = roundf((float)(_oscilFreq) / (4096 * SERVO_FREQ)) - 1;
   if (writeRegister(PCA9685_PRE_SCALE, &towrite) != 0) {
-    LOG_PRINTF("Write to PRE_SCALE failed.");
+    LOG_PRINTF("Write to PRE_SCALE failed.\n");
     return PCA9685_CMD_ERR;
   }
   // Restart without losing PWM CONFIG
   if (readRegister(PCA9685_MODE1, &readvalue) != 0) {
-    LOG_PRINTF("Read from MODE1 failed.");
+    LOG_PRINTF("Read from MODE1 failed.\n");
     return PCA9685_CMD_ERR;
   }
   
   towrite = readvalue & ~(1 << 4);  // clear the SLEEP bit
   if (writeRegister(PCA9685_MODE1, &towrite) != 0) {
-    LOG_PRINTF("Write to MODE1 for restart failed.");
+    LOG_PRINTF("Write to MODE1 for restart failed.\n");
     return PCA9685_CMD_ERR;
   }
 
@@ -200,7 +200,7 @@ pca9685_err_t PCA9685_Servo_Driver::begin() {
 
   towrite = MODE2_TOTEMPOLE;
   if (writeRegister(PCA9685_MODE2, &towrite) != 0) {
-    LOG_PRINTF("Write to MODE2 failed.");
+    LOG_PRINTF("Write to MODE2 failed.\n");
     return PCA9685_CMD_ERR;
   }
 
@@ -238,25 +238,25 @@ pca9685_err_t PCA9685_Servo_Driver::writeMicroseconds(uint8_t pin,
   // TODO: shorten this with auto increment registers
   towrite = (delaytime & 0xFF);
   if (writeRegister(PCA9685_LED_ON_L(pin), &towrite) != 0) {
-    LOG_PRINTF("Write LED_ON_L %d failed.", pin);
+    LOG_PRINTF("Write LED_ON_L %d failed.\n", pin);
     return PCA9685_CMD_ERR;
   }
 
   towrite = (delaytime >> 8) & 0xFF;
   if (writeRegister(PCA9685_LED_ON_H(pin), &towrite) != 0) {
-    LOG_PRINTF("Write LED_ON_H %d failed.", pin);
+    LOG_PRINTF("Write LED_ON_H %d failed.\n", pin);
     return PCA9685_CMD_ERR;
   }
 
   towrite = (oncount + delaytime) & 0xFF;
   if (writeRegister(PCA9685_LED_OFF_L(pin), &towrite) != 0) {
-    LOG_PRINTF("Write LED_OFF_L %d failed.", pin);
+    LOG_PRINTF("Write LED_OFF_L %d failed.\n", pin);
     return PCA9685_CMD_ERR;
   }
 
   towrite = ((oncount + delaytime) >> 8) & 0xFF;
   if (writeRegister(PCA9685_LED_OFF_H(pin), &towrite) != 0) {
-    LOG_PRINTF("Write LED_OFF_H %d failed.", pin);
+    LOG_PRINTF("Write LED_OFF_H %d failed.\n", pin);
     return PCA9685_CMD_ERR;
   }
 

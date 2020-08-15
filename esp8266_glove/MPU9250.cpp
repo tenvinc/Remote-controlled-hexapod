@@ -32,7 +32,7 @@ MPU9250Core::MPU9250Core(i2c_dev_t dev) { this->dev = dev; }
 
 mpu9250_err_t MPU9250Core::writeRegister(const uint8_t regAddr,
                                          const uint8_t data) {
-  writeRegister(regAddr, &data);
+  return writeRegister(regAddr, &data);
 }
 
 mpu9250_err_t MPU9250Core::writeRegister(const uint8_t regAddr,

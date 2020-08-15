@@ -29,7 +29,7 @@ void Hexapod::init() {
     upper_limb_move(upper_idx, 75);  // neutral angle
   }
   for (int lower_idx = 0; lower_idx < 6; lower_idx++) {
-    #if 0
+    #if 1
       lower_limb_move(lower_idx, 0);
     #else
       lower_limb_move(lower_idx, 180);
@@ -39,6 +39,15 @@ void Hexapod::init() {
 
 void Hexapod::stand() {
   for (int ud_angle = 0; ud_angle <= 180; ud_angle += 5) {
+    for (int lower_idx = 0; lower_idx < 6; lower_idx++) {
+      lower_limb_move(lower_idx, ud_angle);
+    }
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+  }
+}
+
+void Hexapod::keep() {
+  for (int ud_angle = 180; ud_angle >= 0; ud_angle -= 5) {
     for (int lower_idx = 0; lower_idx < 6; lower_idx++) {
       lower_limb_move(lower_idx, ud_angle);
     }
