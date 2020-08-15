@@ -22,6 +22,7 @@ var clients = [];  // represents client connecting through browser
 var flag = false;
 
 wsDevServer.on('connection', ws => {
+    devices.push(ws);
     ws.on('message', (message) => {
         if (!flag) {
             console.log("First connection from device!");
@@ -36,6 +37,9 @@ wsDevServer.on('connection', ws => {
 wsClientServer.on('connection', ws => {
     var index = clients.push(ws) - 1;
     ws.on('message', (message) => {
+        devices.forEach(dev => {
+            dev.send(message);  // pass through
+        })
         console.log(message);
     });
     console.log("Client signed in.");

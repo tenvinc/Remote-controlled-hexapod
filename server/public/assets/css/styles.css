@@ -110,47 +110,63 @@
   grid-area: 1 / 3 / span 1 / span 1;
 }
 
+/* .overlay-effect:hover{
+  opacity: 0.5;
+} */
+
 #d-pad-up {
   background: url(../../assets/img/dpad-up.png);
-  background-repeat: no-repeat;
-  background-size: cover;
+  /* background-repeat: no-repeat;
+  background-size: cover; */
   grid-area: 1 / 2 / span 1 / span 1;
 }
 
 #d-pad-turn-left {
   background: url(../../assets/img/dpad-turnleft.png);
-  background-repeat: no-repeat;
-  background-size: cover;
+  /* background-repeat: no-repeat;
+  background-size: cover; */
   grid-area: 1 / 1 / span 1 / span 1;
 }
 
 #d-pad-left {
   background: url(../../assets/img/dpad-left.png);
-  background-repeat: no-repeat;
-  background-size: cover;
+  /* background-repeat: no-repeat;
+  background-size: cover; */
   grid-area: 2 / 1 / span 1 / span 1;
 }
 
 #d-pad-center {
   background: url(../../assets/img/dpad-center.png);
-  background-repeat: no-repeat;
-  background-size: cover;
+  /* background-repeat: no-repeat;
+  background-size: cover; */
   grid-area: 2 / 2 / span 1 / span 1;
 }
 
 #d-pad-down {
   background: url(../../assets/img/dpad-down.png);
-  background-repeat: no-repeat;
-  background-size: cover;
+  /* background-repeat: no-repeat;
+  background-size: cover; */
   grid-area: 3 / 2 / span 1 / span 1;
 }
 
 #d-pad-right {
-  background: black;
   background: url(../../assets/img/dpad-right.png);
+  /* background-repeat: no-repeat;
+  background-size: cover; */
+  grid-area: 2 / 3 / span 1/ span 1;
+}
+
+#d-pad-left, #d-pad-right, #d-pad-up, #d-pad-down, #d-pad-turn-left, #d-pad-turn-right, #d-pad-center {
   background-repeat: no-repeat;
   background-size: cover;
-  grid-area: 2 / 3 / span 1/ span 1;
+}
+
+.overlay-effect {
+  background-color: grey;
+}
+
+.overlay-effect:hover {
+  opacity: 0.5;
 }
 
 .viz-canvas {
