@@ -174,7 +174,7 @@ extern "C" void user_init(void) {
 
   websocket.on_recv_cb = ws_on_recv;
 
-  xActionQueue = xQueueCreate(10, sizeof(Action_t));
+  xActionQueue = xQueueCreate(2, sizeof(Action_t));
   if (xActionQueue == NULL) {
     SYS_PRINTF("Failed to create xActionQueue!\n");
   }
