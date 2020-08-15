@@ -46,7 +46,7 @@ QueueHandle_t xActionQueue;
 
 void ws_on_recv(char *data) {
   Action_t action;
-  // SYS_PRINTF("Recved %d bytes: %s\n", strlen(data), data);
+  SYS_PRINTF("Recved %d bytes: %s\n", strlen(data), data);
   if (strncmp(data, "KEEP", 4) == 0) {
     action = {KEEP, 64};
   } else if (strncmp(data, "STAND", 5) == 0) {
@@ -75,27 +75,63 @@ void sensor_task(void *pvParameters) {
       switch (action.actionType) {
         case KEEP:
           SYS_PRINTF("Keep\n");
+          if (hexy.state != Hexapod::State_t::STANDBY) {
+            hexy.keep();
+            hexy.state = Hexapod::State_t::STANDBY;
+          }
           break;
         case STAND:
+        case MOVE_BACKWARD:
           SYS_PRINTF("Stand\n");
+          if (hexy.state != Hexapod::State_t::STAND) {
+            hexy.stand();
+            hexy.state = Hexapod::State_t::STAND;
+          }
           break;  
         case MOVE_LEFT:
           SYS_PRINTF("Move left\n");
+          if (hexy.state == Hexapod::State_t::STANDBY) {
+            hexy.stand();
+            hexy.state = Hexapod::State_t::STAND;
+          }
+          for (int i=0; i<2; i++) {
+            hexy.state = Hexapod::State_t::WALKING;
+            hexy.turn_left();
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+          }
+          hexy.state = Hexapod::State_t::STAND;
           break;
         case MOVE_RIGHT:
           SYS_PRINTF("Move right\n");
+          if (hexy.state == Hexapod::State_t::STANDBY) {
+            hexy.stand();
+            hexy.state = Hexapod::State_t::STAND;
+          }
+          for (int i=0; i<2; i++) {
+            hexy.state = Hexapod::State_t::WALKING;
+            hexy.turn_right();
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+          }
+          hexy.state = Hexapod::State_t::STAND;
           break;
         case MOVE_FORWARD:
           SYS_PRINTF("Move forward\n");
+          if (hexy.state == Hexapod::State_t::STANDBY) {
+            hexy.stand();
+            hexy.state = Hexapod::State_t::STAND;
+          }
+          for (int i=0; i<2; i++) {
+            hexy.state = Hexapod::State_t::WALKING;
+            hexy.walkForward();
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+          }
+          hexy.state = Hexapod::State_t::STAND;
           break;
-        case MOVE_BACKWARD:
-          SYS_PRINTF("Move backward\n");
-          break;
+        // case MOVE_BACKWARD:
+        //   SYS_PRINTF("Move backward\n");
+        //   break;
       }
-      // for (int i=0; i<10; i++) {
-      //   hexy.walkForward();
-      //   vTaskDelay(200 / portTICK_PERIOD_MS);
-      // }
+      
     }
   }
   vTaskDelete(NULL);

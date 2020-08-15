@@ -23,6 +23,7 @@ var flag = false;
 
 wsDevServer.on('connection', ws => {
     devices.push(ws);
+    console.log("A new device has connected.");
     ws.on('message', (message) => {
         if (!flag) {
             console.log("First connection from device!");

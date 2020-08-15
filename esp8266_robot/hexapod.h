@@ -31,7 +31,16 @@ typedef struct servo_intrinsics {
 } servo_intrinsics_t;
 
 class Hexapod {
+
  public:
+  typedef enum State_t {
+    STANDBY,
+    STAND,
+    WALKING
+  };
+  
+  State_t state;
+
   void init();
   void keep();
   void stand();

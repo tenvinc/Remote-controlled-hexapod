@@ -124,19 +124,24 @@ function teardownConnection() {
 /************************************************************************/
 connectBtn.activateListener(setupConnection, teardownConnection);
 
-const dpads = ["d-pad-left", "d-pad-right", "d-pad-up", "d-pad-down"];
+const dpads = ["d-pad-left", "d-pad-right", "d-pad-up", "d-pad-down", "d-pad-turn-left", "d-pad-turn-right"];
 const dpadElements = {};
 const commands = {
   "d-pad-left": "LEFT",
   "d-pad-right": "RIGHT",
   "d-pad-up": "FORWARD",
-  "d-pad-down": "BACKWARD"
+  "d-pad-down": "BACKWARD",
+  "d-pad-turn-left": "STAND",
+  "d-pad-turn-right": "KEEP"
 };
 const dpadIntervals = {};
 
 dpads.forEach(dpad => {
   dpadElements[dpad] = document.getElementById(dpad);
   dpadElements[dpad].addEventListener('mousedown', () => {
+    if (typeof socket !== 'undefined' && socket.isConnected) {
+      socket.send(commands[dpad]);
+    }
     dpadIntervals[dpad] = setInterval(() => {
       if (typeof socket !== 'undefined' && socket.isConnected) {
         socket.send(commands[dpad]);
